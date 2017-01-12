@@ -13,6 +13,12 @@ Organize the different sheets in a way that makes sense to more than just Jake
 -Split Setup and Summary; place Summary after Line H
 
 Test Files for several sizes
+
+Diffuse Closure error across Lines G and H to clean up graphic.
+  -Make centerpoint Zero
+  -Still report closure error on header
+  
+Label graphic's Lines A-H
 _______________________________________________________________________________________________
 
 System Requirements:
@@ -24,6 +30,8 @@ Macros must be enabled.
 MS Internet Explorer 9 or better. Other HTML5 (and canvas) capable browsers are fine, but won't automatically open.
 
 Originally created in MSExcel 2016, this file is an implementation of T.O. 33K6-4-137-1: Surface Plates Autocollimator Method, dated 30 October 2005. It contains eight procedural sheets for entry of arcsecond angle measurements from which are calculated elevations, one sheet for setup entry and a results summary, and one hidden sheet that replicates a table from the T.O. for easy =IF() statements in the Setup&Summary sheet.
+
+Procedure calls for step to bring Lines G and H centerpoint to Zero with the Lines A and B. I have skipped this to show closure error in graphic.
 
 Changes to Setup dynamically makes available required number of rows on Line sheets to properly execute math for Summary.
 
