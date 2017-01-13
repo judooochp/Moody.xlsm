@@ -19,6 +19,10 @@ Diffuse Closure error across Lines G and H to clean up graphic.
   -Still report closure error on header
   
 Label graphic's Lines A-H
+
+Make compatible with former versions of Excel (97-2003)
+
+Handle Customer Requirements/OOT conditions
 _______________________________________________________________________________________________
 
 System Requirements:
