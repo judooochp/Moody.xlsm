@@ -10,7 +10,7 @@ Intended Updates:
   
 (Completed 13Jan2017) Organize the different sheets in a way that makes sense to more than just Jake
 
--Split Setup and Summary; place Summary after Line H
+  -Split Setup and Summary; place Summary after Line H
 
 Test Files for several sizes
 
@@ -18,13 +18,15 @@ Diffuse Closure error across Lines G and H to clean up graphic.
   -Make centerpoint Zero
   -Still report closure error on header
   
-Label graphic's Lines A-H
+Label graphic's Lines <strike>A-H</strike> 1-8
 
 Make compatible with former versions of Excel (97-2003)
 
 Handle Customer Requirements/OOT conditions
 
 Large plates with large elevations: second Canvas numbers run over each other, especially on horizontal lines. Fix it.
+
+  -(Partially Complete 15Jan2017) -- Defeat staggering for horizontal lines of smaller plates.
 
 Make extensible to plates that are not standard sizes using the GGG-P-463C formula.
 _______________________________________________________________________________________________
