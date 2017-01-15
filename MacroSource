@@ -1,48 +1,15 @@
-Option Explicit
+'''''''''''''''''''''''''''''''''''''''''''''''''''
+'   Copyright (c) 2017 Jacob Eugene Gilliam       '
+'                                                 '
+'   Do not copy, modify, or sell this software.   '
+'   No warranty is provided, express or implied   '
+'   by the use of this software.                  '
+'''''''''''''''''''''''''''''''''''''''''''''''''''
 
-'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-'   Generate Surface Plate Maps using the Moody Method.         '
-'   Creates HTML canvas images.                                 '
-'   Follows T.O. 33K6-4-137-1: Surface Plates;                  '
-'   Autocollimator Method, dated 30 October 2005                '
-'   Created by and Copyright 2017 Jacob Gilliam                 '
-'   Please forgive the rather inelegant code. (;                '
-'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Public Sub ExportDynamicHtml()
 
-'   Set constants that will make use of Excel columns irrelevant _
-    in context of Surface Plate Profile Lines
-Private Const A = "C"
-Private Const B = "D"
-Private Const C = "E"
-Private Const D = "F"
-Private Const E = "G"
-Private Const F = "H"
-Private Const G = "I"
-Private Const H = "J"
-'   Set page dimensions based on 8.5x11", with .75" margins
-Private Const xInch = 7
-Private Const yInch = 9.5
-'   Set screen resolution
-Private Const DPI = 150
-'   Set dimensions of HTML Canvas elements in pixels
-Private Const xSize = DPI * xInch
-Private Const ySize = DPI * yInch
-'   Set the value for half the dimensions. This math would otherwise _
-    need to be done many times, so we may as well do it once (DIO)
-Private Const xSizeHalf = xSize / 2
-Private Const ySizeHalf = ySize / 2
-'   Set the default rotation angle from bird's eye view (about Z axis)
-Private Const zRot = 15
-'   Set X axis rotation angle
-Private Const xRot = 45
-'   Set value for scaling font based on changes in resolution. Program _
-    was originally developed on 90dpi screen, and font size 10 looked _
-    best on it.
-Private Const fontPt = 10 * DPI / 90
+On Error GoTo ErrorHandle
 
-Public Sub ExportHtml()
 
 '   Information about the plate and calibration that we'll _
     want to use later in math and output file headers.
@@ -52,7 +19,6 @@ Public Sub ExportHtml()
     Dim PlateMfrVar As String       '   Manufacturer
     Dim PlateWidth As String        '   Width in Inches
     Dim PlateLength As String       '   Length in Inches
-    Dim ReferenceLine As String     '   Side of plate with Calibration Sticker. Will Bold.
     Dim FootSize As String          '   Carriage Mirror foot spacing
     Dim BorderSizeX As String       '   Distance of lines D and F from edge ("margin")
     Dim BorderSizeY As String       '   Distance of lines C and E from edge ("margin")
@@ -67,715 +33,628 @@ Public Sub ExportHtml()
     Dim Tech As String              '   Name of technician on certificate
     Dim DateVar As String           '   Date of map generation (Excel's TODAY())
     
-    DateVar = Range("P4")
-    CertNo = Range("N3")
-    Tech = Range("N6")
-    CustVar = Range("P5")
-    PlateVar = Range("N4")
-    PlateSnVar = Range("P9")
-    PlateMfrVar = Range("P8")
-    PlateWidth = Range("P10")
-    PlateLength = Range("P11")
-    ReferenceLine = Range("N17")
-    FootSize = Range("N16")
-    BorderSizeX = Range("N18")
-    BorderSizeY = Range("N19")
-    DiagonalInches = Range("N20")
-    RunDescript = Range("N5")
-    PlateGrade = Range("P14")
-    PlateFlatness = Range("P15")
-    CloseG = Range("P19")
-    CloseH = Range("P20")
-    repeatVar = Range("P16")
+    DateVar = Worksheets("Setup").Range("F4")
+    CertNo = Worksheets("Setup").Range("F5")
+    Tech = Worksheets("Setup").Range("D6")
+    CustVar = Worksheets("Setup").Range("D4")
+    PlateVar = Worksheets("Setup").Range("D5")
+    PlateSnVar = Worksheets("Setup").Range("D9")
+    PlateMfrVar = Worksheets("Setup").Range("D8")
+    PlateWidth = Worksheets("Setup").Range("F8")
+    PlateLength = Worksheets("Setup").Range("F9")
+    FootSize = Worksheets("Setup").Range("F11")
+    BorderSizeX = Worksheets("Setup").Range("D12")
+    BorderSizeY = Worksheets("Setup").Range("D13")
+    DiagonalInches = Worksheets("Setup").Range("D14")
+    RunDescript = Worksheets("Setup").Range("F6")
+    PlateGrade = Worksheets("Summary").Range("P3")
+    PlateFlatness = Worksheets("Summary").Range("P4")
+    CloseG = Worksheets("Summary").Range("P8")
+    CloseH = Worksheets("Summary").Range("P9")
+    repeatVar = Worksheets("Summary").Range("P5")
 
-'   VBA doesn't PI().
-    Dim Pi As Double
-    Pi = 3.14159265358979       '   Originally: 4 * Atn(1)
-    
-'   Math for 3D representation of vertical lines at points of measurement
-    Dim zMax As Integer
-    Dim zMin As Integer
-    Dim zRange As Integer
-    Dim zDiv As Double
-    Dim PWid As Integer
-    Dim PLen As Integer
-    zMax = Range("K2")
-    zMin = Range("K1")                      '   Used to set baselines
-    zRange = CInt(PlateFlatness)            '   Just need an INT version for math
-    zDiv = ySize / (zMax - zMin) / 8        '   Highest point = 1/8th of the page.
-    PWid = Range("N14")                     '   Number of measurements across D, F, G
-    PLen = Range("N15")                     '   Number of meas across C, E, H
-
-    Dim NameFile As String
-'   Decide name of file based on ID# and WO#, and add Run Description _
-    if there is one.
-    If (RunDescript = "") Then
-        NameFile = PlateVar & "_" & CertNo
+' Required values that I'd rather be subject to external control
+    Dim DPI As Integer
+    Dim pageWidth As Double
+    Dim xSize As Double
+    Dim pageHeight As Double
+    Dim ySize As Double
+    Dim ReferenceLine As String     'Side of the plate with Calibration Sticker. Will Bold.
+    ReferenceLine = Worksheets("Setup").Range("D11").Value
+    If ReferenceLine = "3" Or ReferenceLine = "4" Or ReferenceLine = "5" Or ReferenceLine = "6" Then
+        ' Do Nothing
     Else
-        NameFile = PlateVar & "_" & CertNo & _
-            "_" & RunDescript
+        MsgBox ("You must enter the reference line (3, 4, 5, or 6)" & vbNewLine & _
+            "This is the side of the Plate you will place your Calibration Sticker.")
+        Worksheets("Setup").Activate
+        Worksheets("Setup").Range("D11").Select
+        Exit Sub
     End If
-    
-    Dim PWidHalf As Double
-    Dim PLenHalf As Double
-    PWidHalf = PWid / 2     '   DIO
-    PLenHalf = PLen / 2     '   DIO
-    
-    Dim First As Integer
-    First = 4       '   Row number of elevation column headers
-    Dim LastDiag As Integer     '   Last row with A & B lines' elevations
-    LastDiag = First + Range("N21") + 1      '   Cell N21 never used more than this. No variable needed (NVN).
-    Dim LastLen As Integer
-    LastLen = First + PLen + 1      '   Last row number for lines C, E, and H elevations
-    Dim LastWid As Integer
-    LastWid = First + PWid + 1      '   Last row number for lines D, F, and G elevations
-    Dim RangeDiag As Integer
-    Dim RangeDiagMinOne As Integer
-    Dim RangeDiagMultTwo As Integer
-    RangeDiag = LastDiag - First
-    RangeDiagMinOne = RangeDiag - 1     '   DIO: There are 8 instances of this math
-    RangeDiagMultTwo = RangeDiag * 2    '   DIO: There are 12 instances of this math
-    Dim RangeWid As Integer
-    Dim RangeWidMultTwoMinOne As Integer
-    RangeWid = PWid + 1     '   DIO: There are one more elevation points than angle measurments
-    RangeWidMultTwoMinOne = RangeWid * 2 - 1    '   DIO
-    Dim RangeLen As Integer
-    Dim RangeLenMultTwoMinOne As Integer
-    RangeLen = PLen + 1     '   DIO
-    RangeLenMultTwoMinOne = RangeLen * 2 - 1    '   DIO
-    
-    
- 
-On Error GoTo ErrorHandler
-
-'   String arrays used to send XY coordinates to HTML file in format ##.###,##.###
-    Dim AArray() As String
-    Dim BArray() As String
-    Dim CArray() As String
-    Dim DArray() As String
-    Dim EArray() As String
-    Dim FArray() As String
-    Dim GArray() As String
-    Dim HArray() As String
-    Dim NumArray() As String
-    Dim NumLen As Integer
-       
-    ReDim AArray(RangeDiagMultTwo - 1)
-    ReDim BArray(RangeDiagMultTwo - 1)
-    ReDim CArray(RangeLenMultTwoMinOne)      '   It would either be this or PLen * 2 + 1
-    ReDim DArray(RangeWid * 2 - 1)
-    ReDim EArray(RangeLenMultTwoMinOne)
-    ReDim FArray(RangeWid * 2 - 1)
-    ReDim GArray(RangeWid * 2 - 1)
-    ReDim HArray(RangeLenMultTwoMinOne)
-
-'   NumArray needs to make X,Y coordinates and share the elevation integer for display.
-    NumLen = UBound(AArray, 1) + UBound(BArray, 1) + UBound(CArray, 1) + UBound(DArray, 1) + UBound(EArray, 1) + UBound(FArray, 1) + UBound(GArray, 1) + UBound(HArray, 1)
-    ReDim NumArray(NumLen * 3)
-    
-    Dim i As Integer
-    Dim DiagLen As Double
-    DiagLen = Sqr((PWid ^ 2) + (PLen ^ 2))      '   DIO: Diagonal of displayed elevation points
-    
-    Dim angle As Double
-    angle = Atn(PLen / PWid)        '   Find angle along which to display elevation points
-    
-    Dim mult As Double
-    mult = xSize / DiagLen      '   Scale to prevent spillover of canvas element. _
-                                    NOT TESTED FOR ANGLES OTHER THAN 15DEG ABOUT Z _
-                                    AND 45DEG ABOUT X
-    
-    Dim zRotRadCos As Double
-    Dim zRotRadSin As Double
-    Dim xRotRadCos As Double
-    Dim zRotDiagX As Double
-    Dim zRotDiagY As Double
-    zRotRadCos = Cos(zRot * Pi / 180)       '   DIO: Matrix math important to rotation about Z
-    zRotRadSin = Sin(zRot * Pi / 180)       '   DIO: Matrix math important to rotation about Z
-    xRotRadCos = Cos(xRot * Pi / 180)       '   DIO: Matrix math important to rotation about X
-    zRotDiagX = Cos(2 * Pi - angle)         '   DIO: Matrix math important to rotation about Z
-    zRotDiagY = Sin(2 * Pi - angle)         '   DIO: Matrix math important to rotation about Z
-
-'   Dimensional Values
-    Dim x As Double
-    Dim y As Double
-    Dim z As Double
-    
-'   Various Counters
-    Dim m As Integer
-    Dim n As Integer
-        m = 0
-        n = 0
-        
-    Dim xPrime As Double
-    Dim yPrime As Double
-    
-'   Line A
-    For i = 0 To RangeDiagMultTwo - 1
-        x = Round(zRotDiagX * (DiagLen * (RangeDiagMinOne - m) / RangeDiagMinOne), 3)
-        y = Round(zRotDiagY * (DiagLen * (RangeDiagMinOne - m) / RangeDiagMinOne), 3)
-        z = Range(A & m + First + 1)
-
-        NumArray(n) = x - PWidHalf
-        NumArray(n + 1) = y + PLenHalf
-        NumArray(n + 2) = CInt(z)
-        
-'   Use Primes to keep X and Y unchanged until the matrix math is complete
-        xPrime = (x - PWidHalf) * zRotRadCos - (y + PLenHalf) * zRotRadSin
-        yPrime = (x - PWidHalf) * zRotRadSin + (y + PLenHalf) * zRotRadCos
-        x = xPrime
-        y = yPrime
-        
-        yPrime = y * xRotRadCos
-        y = yPrime
-        
-        AArray(i) = (x * mult) + (xSizeHalf) & "," & (y * mult) + (ySizeHalf)
-        i = i + 1
-        AArray(i) = (x * mult) + (xSizeHalf) & "," & (y * mult) + (ySizeHalf) - (z - zMin) * zDiv
-        m = m + 1
-        n = n + 3
-    Next
-        m = 0
-'   Line B
-    For i = 0 To RangeDiagMultTwo - 1
-        x = Round(zRotDiagX * (DiagLen * (RangeDiagMinOne - m) / RangeDiagMinOne), 3)
-        y = (-PLen - Round(zRotDiagY * (DiagLen * (RangeDiagMinOne - m) / RangeDiagMinOne), 3))
-        z = (Range(B & m + First + 1))
-        
-        NumArray(n) = x - PWidHalf
-        NumArray(n + 1) = y + PLenHalf
-        NumArray(n + 2) = CInt(z)
-        
-        xPrime = (x - PWidHalf) * zRotRadCos - (y + PLenHalf) * zRotRadSin
-        yPrime = (x - PWidHalf) * zRotRadSin + (y + PLenHalf) * zRotRadCos
-        x = xPrime
-        y = yPrime
-        
-        yPrime = y * xRotRadCos
-        y = yPrime
-        
-        BArray(i) = (x * mult) + (xSizeHalf) & "," & (y * mult) + (ySizeHalf)
-        i = i + 1
-        BArray(i) = (x * mult) + (xSizeHalf) & "," & (y * mult) + (ySizeHalf) - (z - zMin) * zDiv
-        m = m + 1
-        n = n + 3
-    Next
-        m = 0
-'   Line C
-    For i = 0 To RangeLenMultTwoMinOne
-        x = PWid
-        y = -m
-        z = (Range(C & m + First + 1))
-        
-        NumArray(n) = x - PWidHalf
-        NumArray(n + 1) = y + PLenHalf
-        NumArray(n + 2) = CInt(z)
-        
-        xPrime = (x - PWidHalf) * zRotRadCos - (y + PLenHalf) * zRotRadSin
-        yPrime = (x - PWidHalf) * zRotRadSin + (y + PLenHalf) * zRotRadCos
-        x = xPrime
-        y = yPrime
-        
-        yPrime = y * xRotRadCos
-        y = yPrime
-        
-        CArray(i) = (x * mult) + (xSizeHalf) & "," & (y * mult) + (ySizeHalf)
-        i = i + 1
-        CArray(i) = (x * mult) + (xSizeHalf) & "," & (y * mult) + (ySizeHalf) - (z - zMin) * zDiv
-        m = m + 1
-        n = n + 3
-    Next
-        m = 0
-'   Line D
-    For i = 0 To RangeWidMultTwoMinOne
-        x = (PWid - m)
-        y = -PLen
-        z = (Range(D & m + First + 1))
-        
-        NumArray(n) = x - PWidHalf
-        NumArray(n + 1) = y + PLenHalf
-        NumArray(n + 2) = CInt(z)
-        
-        xPrime = (x - PWidHalf) * zRotRadCos - (y + PLenHalf) * zRotRadSin
-        yPrime = (x - PWidHalf) * zRotRadSin + (y + PLenHalf) * zRotRadCos
-        x = xPrime
-        y = yPrime
-        
-        yPrime = y * xRotRadCos
-        y = yPrime
-        
-        DArray(i) = (x * mult) + (xSizeHalf) & "," & (y * mult) + (ySizeHalf)
-        i = i + 1
-        DArray(i) = (x * mult) + (xSizeHalf) & "," & (y * mult) + (ySizeHalf) - (z - zMin) * zDiv
-        m = m + 1
-        n = n + 3
-    Next
-        m = 0
-'   Line E
-    For i = 0 To RangeLenMultTwoMinOne
-        x = 0
-        y = m - PLen
-        z = (Range(E & m + First + 1))
-        
-        NumArray(n) = x - PWidHalf
-        NumArray(n + 1) = y + PLenHalf
-        NumArray(n + 2) = CInt(z)
-        
-        xPrime = (x - PWidHalf) * zRotRadCos - (y + PLenHalf) * zRotRadSin
-        yPrime = (x - PWidHalf) * zRotRadSin + (y + PLenHalf) * zRotRadCos
-        x = xPrime
-        y = yPrime
-        
-        yPrime = y * xRotRadCos
-        y = yPrime
-        
-        EArray(i) = (x * mult) + (xSizeHalf) & "," & (y * mult) + (ySizeHalf)
-        i = i + 1
-        EArray(i) = (x * mult) + (xSizeHalf) & "," & (y * mult) + (ySizeHalf) - (z - zMin) * zDiv
-        m = m + 1
-        n = n + 3
-    Next
-        m = 0
-'   Line F
-    For i = 0 To RangeWidMultTwoMinOne
-        x = m
-        y = 0
-        z = (Range(F & m + First + 1))
-        
-        NumArray(n) = x - PWidHalf
-        NumArray(n + 1) = y + PLenHalf
-        NumArray(n + 2) = CInt(z)
-        
-        xPrime = (x - PWidHalf) * zRotRadCos - (y + PLenHalf) * zRotRadSin
-        yPrime = (x - PWidHalf) * zRotRadSin + (y + PLenHalf) * zRotRadCos
-        x = xPrime
-        y = yPrime
-        
-        yPrime = y * xRotRadCos
-        y = yPrime
-        
-        FArray(i) = (x * mult) + (xSizeHalf) & "," & (y * mult) + (ySizeHalf)
-        i = i + 1
-        FArray(i) = (x * mult) + (xSizeHalf) & "," & (y * mult) + (ySizeHalf) - (z - zMin) * zDiv
-        m = m + 1
-        n = n + 3
-    Next
-        m = 0
-'   Line G
-    For i = 0 To RangeWidMultTwoMinOne
-        x = (PWid - m)
-        y = -PLenHalf
-        z = (Range(G & m + First + 1))
-        
-        NumArray(n) = x - PWidHalf
-        NumArray(n + 1) = y + PLenHalf
-        NumArray(n + 2) = CInt(z)
-        
-        xPrime = (x - PWidHalf) * zRotRadCos - (y + PLenHalf) * zRotRadSin
-        yPrime = (x - PWidHalf) * zRotRadSin + (y + PLenHalf) * zRotRadCos
-        x = xPrime
-        y = yPrime
-        
-        yPrime = y * xRotRadCos
-        y = yPrime
-        
-        GArray(i) = (x * mult) + (xSizeHalf) & "," & (y * mult) + (ySizeHalf)
-        i = i + 1
-        GArray(i) = (x * mult) + (xSizeHalf) & "," & (y * mult) + (ySizeHalf) - (z - zMin) * zDiv
-        m = m + 1
-        n = n + 3
-    Next
-        m = 0
-'   Line H
-    For i = 0 To (RangeLen) * 2 - 2
-        x = PWidHalf
-        y = m - PLen
-        z = (Range(H & m + First + 1))
-        
-        NumArray(n) = x - PWidHalf
-        NumArray(n + 1) = y + PLenHalf
-        NumArray(n + 2) = CInt(z)
-        
-        xPrime = (x - PWidHalf) * zRotRadCos - (y + PLenHalf) * zRotRadSin
-        yPrime = (x - PWidHalf) * zRotRadSin + (y + PLenHalf) * zRotRadCos
-        x = xPrime
-        y = yPrime
-        
-        yPrime = y * xRotRadCos
-        y = yPrime
-        
-        HArray(i) = (x * mult) + (xSizeHalf) & "," & (y * mult) + (ySizeHalf)
-        i = i + 1
-        HArray(i) = (x * mult) + (xSizeHalf) & "," & (y * mult) + (ySizeHalf) - (z - zMin) * zDiv
-        m = m + 1
-        n = n + 3
-    Next
-    
-    
-    Dim ObjPath As String
-    ObjPath = BrowseForFolder()
-    
+    DPI = 150
+    pageWidth = 7.5
+    pageHeight = 9
+    xSize = DPI * pageWidth
+    ySize = DPI * pageHeight
+    Dim fontpt As Double
+    Dim diagCheck As Integer
+    diagCheck = Worksheets("Setup").Range("F14")
+    If diagCheck > 30 Then
+        fontpt = 4 / diagCheck * DPI
+    ElseIf diagCheck < 10 Then
+        fontpt = 14
+    Else
+        fontpt = 3 / diagCheck * DPI
+    End If
+' Browse for desired folder
+Dim ObjPath As String
+ObjPath = BrowseForFolder()
+If ObjPath = False Then
+    MsgBox ("We really need to know where to " & _
+        vbNewLine & "store your file.")
+    Exit Sub
+End If
+' Create TXT file, save as HTML
     Dim HtmlFile As Object
     Set HtmlFile = CreateObject("Scripting.FileSystemObject")
     Dim HtmlDo As Object
-    ObjPath = ObjPath & "\" & NameFile & ".html"
+    Dim NameFile As String
+NameFile = InputBox("Filename?")
+ObjPath = ObjPath & "\" & NameFile & ".html"
     Set HtmlDo = HtmlFile.CreateTextFile(ObjPath, True)
-
 HtmlDo.WriteLine ("<!DOCTYPE HTML>")
 HtmlDo.WriteLine ("<html>")
 HtmlDo.WriteLine ("<head>")
 HtmlDo.WriteLine ("<title>" & NameFile & "</title>")
+HtmlDo.WriteLine ("    <style media=""print"">")
+HtmlDo.WriteLine ("        @media print {")
+HtmlDo.WriteLine ("            .no-display {")
+HtmlDo.WriteLine ("                display: none;")
+HtmlDo.WriteLine ("            }")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("    </style>")
+HtmlDo.WriteLine ("    <style media=""screen"">")
+HtmlDo.WriteLine ("        @media screen {")
+HtmlDo.WriteLine ("            .zoom1 {")
+HtmlDo.WriteLine ("                transform: scale(0.5,0.5);")
+HtmlDo.WriteLine ("                position: absolute;")
+HtmlDo.WriteLine ("                left:-250px;")
+HtmlDo.WriteLine ("                top:-250px;")
+HtmlDo.WriteLine ("            }")
+HtmlDo.WriteLine ("            .zoom2 {")
+HtmlDo.WriteLine ("                transform: scale(0.5,0.5);")
+HtmlDo.WriteLine ("                position: absolute;")
+HtmlDo.WriteLine ("                left:300px;")
+HtmlDo.WriteLine ("                top:-250px;")
+HtmlDo.WriteLine ("            }")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("    </style>")
 HtmlDo.WriteLine ("</head>")
 HtmlDo.WriteLine ("<body>")
-HtmlDo.WriteLine ("<canvas id=""sPlate"" width=""" & xSize & """ height=""" & ySize & """ style=""border: 1px #ccc solid;page-break-after:always;"">Surface Plate drawing must be viewed in a modern browser with Canvas compatibility.<br />Please open " & ObjPath & " in Internet Explorer 9 or better, Firefox, Chrome, Safari, or Opera.</canvas>")
-HtmlDo.WriteLine ("<canvas id=""sPlateNum"" width=""" & xSize & """ height=""" & ySize & """ style=""border: 1px #ccc solid;"">Surface Plate drawing must be viewed in a modern browser with Canvas compatibility.<br />Please open " & ObjPath & " in Internet Explorer 9 or better, Firefox, Chrome, Safari, or Opera.</canvas>")
+HtmlDo.WriteLine ("    <p class=""no-display"">")
+HtmlDo.WriteLine ("        <form name=""zRotForm"" class=""no-display"">")
+HtmlDo.WriteLine ("            <input id=""angleIn"" type=""text"" placeholder=""Angle in Degrees (&deg;)"" class=""no-display"" />")
+HtmlDo.WriteLine ("            <input type=""button"" id=""angleGo"" value=""Enter Angle"" class=""no-display"" /> Press with no value to add 5&deg; (degrees) to viewing angle.")
+HtmlDo.WriteLine ("        </form>")
+HtmlDo.WriteLine ("    </p>")
+HtmlDo.WriteLine ("    <p class=""no-display"">")
+HtmlDo.WriteLine ("    When printing, select the ""Shrink to Fit"" or ""Fit to Page"" option.")
+HtmlDo.WriteLine ("    </p>")
+HtmlDo.WriteLine ("    <canvas id=""sPlate"" width=""1050"" height=""1425"" style=""border: 1px #ccc solid; page-break-after:always;"" class=""zoom1"">")
+HtmlDo.WriteLine ("        <p>Surface Plate drawing must be viewed in a modern browser with Canvas compatibility.<br />Please open " & ObjPath & " in Internet Explorer 9 or better, Firefox, Chrome, Safari, or Opera.</p>")
+HtmlDo.WriteLine ("    </canvas>")
+HtmlDo.WriteLine ("<canvas id=""sPlateNum"" width=""1050"" height=""1425"" style=""border: 1px #ccc solid;"" class=""zoom2"">Surface Plate drawing must be viewed in a modern browser with Canvas compatibility.<br />Please open " & ObjPath & " in Internet Explorer 9 or better, Firefox, Chrome, Safari, or Opera.</canvas>")
 HtmlDo.WriteLine ("<script>")
 HtmlDo.WriteLine ("var canvas = document.getElementById(""sPlate"");")
 HtmlDo.WriteLine ("var context = canvas.getContext(""2d"");")
 HtmlDo.WriteLine ("var canvasNum = document.getElementById(""sPlateNum"");")
 HtmlDo.WriteLine ("var contextNum = canvasNum.getContext(""2d"");")
-
-HtmlDo.WriteLine ("")
-    Dim upperBound As Integer
-    upperBound = 0
-    For i = 0 To UBound(AArray)
-HtmlDo.WriteLine ("context.beginPath();")
-        If ReferenceLine = "A" Then
-HtmlDo.WriteLine ("context.lineWidth=3;")
-        Else
-HtmlDo.WriteLine ("context.lineWidth=1;")
-        End If
-HtmlDo.WriteLine ("context.moveTo(" & AArray(i) & ");")
-        i = i + 1
-HtmlDo.WriteLine ("context.lineTo(" & AArray(i) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-        If (i < UBound(AArray)) Then
-HtmlDo.WriteLine ("context.beginPath();")
-        If ReferenceLine = "A" Then
-HtmlDo.WriteLine ("context.lineWidth=3;")
-        Else
-HtmlDo.WriteLine ("context.lineWidth=1;")
-        End If
-HtmlDo.WriteLine ("context.moveTo(" & AArray(i) & ");")
-HtmlDo.WriteLine ("context.lineTo(" & AArray(i + 2) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-HtmlDo.WriteLine ("context.moveTo(" & AArray(0) & ");")
-HtmlDo.WriteLine ("context.lineTo(" & AArray(i + 1) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-        End If
-        upperBound = upperBound + 1
+' Line Loop; advances Sheet Number
+    For i = 1 To 8
+' Get number of angle measurements per sheet and add _
+    1 so we have the number of elevation stations.
+        o = Sheets("Line " & i).Range("A1").Value
+' Create Javascript array with Name Line(#)
+HtmlDo.WriteLine ("var Line" & i & " = [")
+' Result Loop; advances Row (Measurement Station) Number _
+    for j=0 to worksheets("Sheet" & i).
+        For j = 0 To o - 1
+' Insert Z values in order, up to (not including) the last value
+HtmlDo.WriteLine ("        " & CInt(Sheets("Line " & i).Range("K" & j + 8).Value) & ",")
+        Next
+' Insert last value with proper closer
+HtmlDo.WriteLine ("        " & CInt(Sheets("Line " & i).Range("K" & j + 8).Value) & "];")
     Next
-HtmlDo.WriteLine ("")
-    For i = 0 To UBound(BArray)
-HtmlDo.WriteLine ("context.beginPath();")
-        If (ReferenceLine = "B") Then
-HtmlDo.WriteLine ("context.lineWidth=3;")
-        Else
-HtmlDo.WriteLine ("context.lineWidth=1;")
-        End If
-HtmlDo.WriteLine ("context.moveTo(" & BArray(i) & ");")
-        i = i + 1
-HtmlDo.WriteLine ("context.lineTo(" & BArray(i) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-        If (i < UBound(BArray)) Then
-HtmlDo.WriteLine ("context.beginPath();")
-        If (ReferenceLine = "B") Then
-HtmlDo.WriteLine ("context.lineWidth=3;")
-        Else
-HtmlDo.WriteLine ("context.lineWidth=1;")
-        End If
-HtmlDo.WriteLine ("context.moveTo(" & BArray(i) & ");")
-HtmlDo.WriteLine ("context.lineTo(" & BArray(i + 2) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-HtmlDo.WriteLine ("context.moveTo(" & BArray(0) & ");")
-HtmlDo.WriteLine ("context.lineTo(" & BArray(i + 1) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-        End If
-        upperBound = upperBound + 1
-    Next
-HtmlDo.WriteLine ("")
-    For i = 0 To UBound(CArray)
-HtmlDo.WriteLine ("context.beginPath();")
-        If (ReferenceLine = "C") Then
-HtmlDo.WriteLine ("context.lineWidth=3;")
-        Else
-HtmlDo.WriteLine ("context.lineWidth=1;")
-        End If
-HtmlDo.WriteLine ("context.moveTo(" & CArray(i) & ");")
-        i = i + 1
-HtmlDo.WriteLine ("context.lineTo(" & CArray(i) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-        If (i < UBound(CArray)) Then
-HtmlDo.WriteLine ("context.beginPath();")
-        If (ReferenceLine = "C") Then
-HtmlDo.WriteLine ("context.lineWidth=3;")
-        Else
-HtmlDo.WriteLine ("context.lineWidth=1;")
-        End If
-HtmlDo.WriteLine ("context.moveTo(" & CArray(i) & ");")
-HtmlDo.WriteLine ("context.lineTo(" & CArray(i + 2) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-HtmlDo.WriteLine ("context.moveTo(" & CArray(0) & ");")
-HtmlDo.WriteLine ("context.lineTo(" & CArray(i + 1) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-        End If
-        upperBound = upperBound + 1
-    Next
-HtmlDo.WriteLine ("")
-    For i = 0 To UBound(DArray)
-HtmlDo.WriteLine ("context.beginPath();")
-        If (ReferenceLine = "D") Then
-HtmlDo.WriteLine ("context.lineWidth=3;")
-        Else
-HtmlDo.WriteLine ("context.lineWidth=1;")
-        End If
-HtmlDo.WriteLine ("context.moveTo(" & DArray(i) & ");")
-        i = i + 1
-HtmlDo.WriteLine ("context.lineTo(" & DArray(i) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-        If (i < UBound(DArray)) Then
-HtmlDo.WriteLine ("context.beginPath();")
-        If (ReferenceLine = "D") Then
-HtmlDo.WriteLine ("context.lineWidth=3;")
-        Else
-HtmlDo.WriteLine ("context.lineWidth=1;")
-        End If
-HtmlDo.WriteLine ("context.moveTo(" & DArray(i) & ");")
-HtmlDo.WriteLine ("context.lineTo(" & DArray(i + 2) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-HtmlDo.WriteLine ("context.moveTo(" & DArray(0) & ");")
-HtmlDo.WriteLine ("context.lineTo(" & DArray(i + 1) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-        End If
-        upperBound = upperBound + 1
-    Next
-HtmlDo.WriteLine ("")
-    For i = 0 To UBound(EArray)
-HtmlDo.WriteLine ("context.beginPath();")
-        If (ReferenceLine = "E") Then
-HtmlDo.WriteLine ("context.lineWidth=3;")
-        Else
-HtmlDo.WriteLine ("context.lineWidth=1;")
-        End If
-HtmlDo.WriteLine ("context.moveTo(" & EArray(i) & ");")
-        i = i + 1
-HtmlDo.WriteLine ("context.lineTo(" & EArray(i) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-        If (i < UBound(EArray)) Then
-HtmlDo.WriteLine ("context.beginPath();")
-        If (ReferenceLine = "E") Then
-HtmlDo.WriteLine ("context.lineWidth=3;")
-        Else
-HtmlDo.WriteLine ("context.lineWidth=1;")
-        End If
-HtmlDo.WriteLine ("context.moveTo(" & EArray(i) & ");")
-HtmlDo.WriteLine ("context.lineTo(" & EArray(i + 2) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-HtmlDo.WriteLine ("context.moveTo(" & EArray(0) & ");")
-HtmlDo.WriteLine ("context.lineTo(" & EArray(i + 1) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-        End If
-        upperBound = upperBound + 1
-    Next
-HtmlDo.WriteLine ("")
-    For i = 0 To UBound(FArray)
-HtmlDo.WriteLine ("context.beginPath();")
-        If (ReferenceLine = "F") Then
-HtmlDo.WriteLine ("context.lineWidth=3;")
-        Else
-HtmlDo.WriteLine ("context.lineWidth=1;")
-        End If
-HtmlDo.WriteLine ("context.moveTo(" & FArray(i) & ");")
-        i = i + 1
-HtmlDo.WriteLine ("context.lineTo(" & FArray(i) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-        If (i < UBound(FArray)) Then
-HtmlDo.WriteLine ("context.beginPath();")
-        If (ReferenceLine = "F") Then
-HtmlDo.WriteLine ("context.lineWidth=3;")
-        Else
-HtmlDo.WriteLine ("context.lineWidth=1;")
-        End If
-HtmlDo.WriteLine ("context.moveTo(" & FArray(i) & ");")
-HtmlDo.WriteLine ("context.lineTo(" & FArray(i + 2) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-HtmlDo.WriteLine ("context.moveTo(" & FArray(0) & ");")
-HtmlDo.WriteLine ("context.lineTo(" & FArray(i + 1) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-        End If
-        upperBound = upperBound + 1
-        
-    Next
-HtmlDo.WriteLine ("")
-    For i = 0 To UBound(GArray)
-HtmlDo.WriteLine ("context.beginPath();")
-        If (ReferenceLine = "G") Then
-HtmlDo.WriteLine ("context.lineWidth=3;")
-        Else
-HtmlDo.WriteLine ("context.lineWidth=1;")
-        End If
-HtmlDo.WriteLine ("context.moveTo(" & GArray(i) & ");")
-        i = i + 1
-HtmlDo.WriteLine ("context.lineTo(" & GArray(i) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-        If (i < UBound(GArray)) Then
-HtmlDo.WriteLine ("context.beginPath();")
-        If (ReferenceLine = "G") Then
-HtmlDo.WriteLine ("context.lineWidth=3;")
-        Else
-HtmlDo.WriteLine ("context.lineWidth=1;")
-        End If
-HtmlDo.WriteLine ("context.moveTo(" & GArray(i) & ");")
-HtmlDo.WriteLine ("context.lineTo(" & GArray(i + 2) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-HtmlDo.WriteLine ("context.moveTo(" & GArray(0) & ");")
-HtmlDo.WriteLine ("context.lineTo(" & GArray(i + 1) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-        End If
-        upperBound = upperBound + 1
-    Next
-HtmlDo.WriteLine ("")
-    For i = 0 To UBound(HArray)
-HtmlDo.WriteLine ("context.beginPath();")
-        If (ReferenceLine = "H") Then
-HtmlDo.WriteLine ("context.lineWidth=3;")
-        Else
-HtmlDo.WriteLine ("context.lineWidth=1;")
-        End If
-HtmlDo.WriteLine ("context.moveTo(" & HArray(i) & ");")
-        i = i + 1
-HtmlDo.WriteLine ("context.lineTo(" & HArray(i) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-        If (i < UBound(HArray)) Then
-HtmlDo.WriteLine ("context.beginPath();")
-        If (ReferenceLine = "H") Then
-HtmlDo.WriteLine ("context.lineWidth=3;")
-        Else
-HtmlDo.WriteLine ("context.lineWidth=1;")
-        End If
-HtmlDo.WriteLine ("context.moveTo(" & HArray(i) & ");")
-HtmlDo.WriteLine ("context.lineTo(" & HArray(i + 2) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-HtmlDo.WriteLine ("context.moveTo(" & HArray(0) & ");")
-HtmlDo.WriteLine ("context.lineTo(" & HArray(i + 1) & ");")
-HtmlDo.WriteLine ("context.stroke();")
-        End If
-        upperBound = upperBound + 1
-    Next
-    
+HtmlDo.WriteLine ("var zRot = 15;")
+HtmlDo.WriteLine ("var xRot = 45;")
+Dim minElev As Integer
+minElev = Worksheets("Summary").Range("L1")
+Dim maxElev As Integer
+maxElev = Worksheets("Summary").Range("L2")
+HtmlDo.WriteLine ("var minElev = " & minElev & ";")
+HtmlDo.WriteLine ("var maxElev = " & maxElev & ";")
+HtmlDo.WriteLine ("var flatness = " & maxElev - minElev & ";")
+HtmlDo.WriteLine ("var xSize = 1050;")
+HtmlDo.WriteLine ("var ySize = 1425;")
+HtmlDo.WriteLine ("var pWid = Line4.length - 1;")
+HtmlDo.WriteLine ("var pLen = Line3.length - 1;")
+HtmlDo.WriteLine ("var pDiag = Line1.length - 1;")
+HtmlDo.WriteLine ("var angle = Math.atan(pLen / pWid);")
+HtmlDo.WriteLine ("var zDiv = 1350 / (maxElev - minElev) / 8;")
+HtmlDo.WriteLine ("var diagLen = Math.sqrt(pWid * pWid + pLen * pLen);")
+HtmlDo.WriteLine ("var mult = xSize / diagLen;")
+HtmlDo.WriteLine ("var zRotCos, zRotSin, xRotCos;")
+HtmlDo.WriteLine ("var zRotDiagX = Math.cos(2 * Math.PI - angle);")
+HtmlDo.WriteLine ("var zRotDiagY = Math.sin(2 * Math.PI - angle);")
+HtmlDo.WriteLine ("var RefLine = """ & ReferenceLine & """;")
+HtmlDo.WriteLine ("var x;")
+HtmlDo.WriteLine ("var y;")
+HtmlDo.WriteLine ("var xPrime;")
+HtmlDo.WriteLine ("var yPrime;")
+HtmlDo.WriteLine ("var i;")
+HtmlDo.WriteLine ("function drawMap() {")
+HtmlDo.WriteLine ("    ""use strict"";")
 'HtmlDo.WriteLine ("context.beginPath();")
-HtmlDo.WriteLine ("context.font = """ & fontPt & "pt Arial"";")
-HtmlDo.WriteLine ("context.fillText(""Customer: " & CustVar & """," & 0.06 * xSize & "," & 0.06 * ySize * 0.25 & ");")
-HtmlDo.WriteLine ("context.fillText(""Plate ID: " & PlateVar & """," & 0.06 * xSize & "," & 0.06 * ySize * 0.5 & ");")
-HtmlDo.WriteLine ("context.fillText(""Plate SN: " & PlateSnVar & """," & 0.06 * xSize & "," & 0.06 * ySize * 0.75 & ");")
-HtmlDo.WriteLine ("context.fillText(""Plate Mfr: " & PlateMfrVar & """," & 0.06 * xSize & "," & 0.06 * ySize * 1 & ");")
-HtmlDo.WriteLine ("context.fillText(""Width: " & PlateWidth & """," & 0.06 * xSize & "," & 0.06 * ySize * 1.25 & ");")
-HtmlDo.WriteLine ("context.fillText(""Length: " & PlateLength & """," & 0.06 * xSize & "," & 0.06 * ySize * 1.5 & ");")
-HtmlDo.WriteLine ("context.fillText(""Center is Zero (0 µin) Elevation.""," & 0.06 * xSize & "," & 0.06 * ySize * 1.75 & ");")
-HtmlDo.WriteLine ("context.fillText(""Reference Line (bold): " & ReferenceLine & """," & 0.35 * xSize & "," & 0.06 * ySize * 0.25 & ");")
-HtmlDo.WriteLine ("context.fillText(""Foot Size: " & FootSize & " in""," & 0.35 * xSize & "," & 0.06 * ySize * 0.5 & ");")
-HtmlDo.WriteLine ("context.fillText(""Border (X): " & BorderSizeX & " in""," & 0.35 * xSize & "," & 0.06 * ySize * 0.75 & ");")
-HtmlDo.WriteLine ("context.fillText(""Border (Y): " & BorderSizeY & " in""," & 0.35 * xSize & "," & 0.06 * ySize * 1 & ");")
-HtmlDo.WriteLine ("context.fillText(""Diagonal: " & DiagonalInches & " in""," & 0.35 * xSize & "," & 0.06 * ySize * 1.25 & ");")
-HtmlDo.WriteLine ("context.fillText(""Run Description: " & RunDescript & """," & 0.65 * xSize & "," & 0.06 * ySize * 0.25 & ");")
-HtmlDo.WriteLine ("context.fillText(""Grade: " & PlateGrade & """," & 0.65 * xSize & "," & 0.06 * ySize * 0.5 & ");")
-HtmlDo.WriteLine ("context.fillText(""Flatness: " & PlateFlatness & " µin""," & 0.65 * xSize & "," & 0.06 * ySize * 0.75 & ");")
-HtmlDo.WriteLine ("context.fillText(""Closure G: " & CloseG & " µin""," & 0.65 * xSize & "," & 0.06 * ySize * 1 & ");")
-HtmlDo.WriteLine ("context.fillText(""Closure H: " & CloseH & " µin""," & 0.65 * xSize & "," & 0.06 * ySize * 1.25 & ");")
-HtmlDo.WriteLine ("context.fillText(""Repeat: " & repeatVar & " µin""," & 0.65 * xSize & "," & 0.06 * ySize * 1.5 & ");")
-HtmlDo.WriteLine ("context.fillText(""Certificate: " & CertNo & """," & xSize * 0.06 & "," & ySize - (ySize * 0.06 * 0.25) & ");")
-HtmlDo.WriteLine ("context.fillText(""Technician: " & Tech & """," & xSize * 0.35 & "," & ySize - (ySize * 0.06 * 0.25) & ");")
-HtmlDo.WriteLine ("context.fillText(""Date: " & DateVar & """," & xSize * 0.65 & "," & ySize - (ySize * 0.06 * 0.25) & ");")
-HtmlDo.WriteLine ("context.fillText(""Page 1""," & xSize * 0.9 & "," & ySize - (ySize * 0.06 * 0.25) & ");")
-HtmlDo.WriteLine ("contextNum.font = """ & fontPt & "pt Arial"";")
-HtmlDo.WriteLine ("contextNum.fillText(""Customer: " & CustVar & """," & 0.06 * xSize & "," & 0.06 * ySize * 0.25 & ");")
-HtmlDo.WriteLine ("contextNum.fillText(""Plate ID: " & PlateVar & """," & 0.06 * xSize & "," & 0.06 * ySize * 0.5 & ");")
-HtmlDo.WriteLine ("contextNum.fillText(""Plate SN: " & PlateSnVar & """," & 0.06 * xSize & "," & 0.06 * ySize * 0.75 & ");")
-HtmlDo.WriteLine ("contextNum.fillText(""Plate Mfr: " & PlateMfrVar & """," & 0.06 * xSize & "," & 0.06 * ySize * 1 & ");")
-HtmlDo.WriteLine ("contextNum.fillText(""Width: " & PlateWidth & """," & 0.06 * xSize & "," & 0.06 * ySize * 1.25 & ");")
-HtmlDo.WriteLine ("contextNum.fillText(""Length: " & PlateLength & """," & 0.06 * xSize & "," & 0.06 * ySize * 1.5 & ");")
-HtmlDo.WriteLine ("contextNum.fillText(""Reference Line (bold): " & ReferenceLine & """," & 0.35 * xSize & "," & 0.06 * ySize * 0.25 & ");")
-HtmlDo.WriteLine ("contextNum.fillText(""Foot Size: " & FootSize & " in""," & 0.35 * xSize & "," & 0.06 * ySize * 0.5 & ");")
-HtmlDo.WriteLine ("contextNum.fillText(""Border (X): " & BorderSizeX & " in""," & 0.35 * xSize & "," & 0.06 * ySize * 0.75 & ");")
-HtmlDo.WriteLine ("contextNum.fillText(""Border (Y): " & BorderSizeY & " in""," & 0.35 * xSize & "," & 0.06 * ySize * 1 & ");")
-HtmlDo.WriteLine ("contextNum.fillText(""Diagonal: " & DiagonalInches & " in""," & 0.35 * xSize & "," & 0.06 * ySize * 1.25 & ");")
-HtmlDo.WriteLine ("contextNum.fillText(""Run Description: " & RunDescript & """," & 0.65 * xSize & "," & 0.06 * ySize * 0.25 & ");")
-HtmlDo.WriteLine ("contextNum.fillText(""Grade: " & PlateGrade & """," & 0.65 * xSize & "," & 0.06 * ySize * 0.5 & ");")
-HtmlDo.WriteLine ("contextNum.fillText(""Flatness: " & PlateFlatness & " µin""," & 0.65 * xSize & "," & 0.06 * ySize * 0.75 & ");")
-HtmlDo.WriteLine ("contextNum.fillText(""Closure G: " & CloseG & " µin""," & 0.65 * xSize & "," & 0.06 * ySize * 1 & ");")
-HtmlDo.WriteLine ("contextNum.fillText(""Closure H: " & CloseH & " µin""," & 0.65 * xSize & "," & 0.06 * ySize * 1.25 & ");")
-HtmlDo.WriteLine ("contextNum.fillText(""Repeat: " & repeatVar & " µin""," & 0.65 * xSize & "," & 0.06 * ySize * 1.5 & ");")
-HtmlDo.WriteLine ("contextNum.fillText(""Certificate: " & CertNo & """," & xSize * 0.06 & "," & ySize - (ySize * 0.06 * 0.25) & ");")
-HtmlDo.WriteLine ("contextNum.fillText(""Technician: " & Tech & """," & xSize * 0.35 & "," & ySize - (ySize * 0.06 * 0.25) & ");")
-HtmlDo.WriteLine ("contextNum.fillText(""Date: " & DateVar & """," & xSize * 0.65 & "," & ySize - (ySize * 0.06 * 0.25) & ");")
-HtmlDo.WriteLine ("contextNum.fillText(""Page 2""," & xSize * 0.9 & "," & ySize - (ySize * 0.06 * 0.25) & ");")
-
-HtmlDo.WriteLine ("context.textAlign = ""center"";")
-HtmlDo.WriteLine ("contextNum.textAlign = ""center"";")
-    Dim o As Integer
-    n = 0
-    For o = 0 To upperBound - 1
-        If NumArray(n + 2) = zMin Or NumArray(n + 2) = zMax Then
-HtmlDo.WriteLine ("contextNum.font = ""bold " & fontPt + 4 & "pt Arial"";")
-        Else
-            Select Case (ReferenceLine)
-                Case "C":
-                    If o > RangeDiagMultTwo - 1 And o < RangeDiagMultTwo + RangeLen Then
-HtmlDo.WriteLine ("contextNum.font = ""bold " & fontPt - 2 & "pt Arial"";")
-                    Else
-HtmlDo.WriteLine ("contextNum.font = """ & fontPt - 2 & "pt Arial"";")
-                    End If
-                Case "D":
-                    If o > RangeDiagMultTwo + RangeLen - 1 And o < RangeDiagMultTwo + RangeLen + RangeWid Then
-HtmlDo.WriteLine ("contextNum.font = ""bold " & fontPt - 2 & "pt Arial"";")
-                    Else
-HtmlDo.WriteLine ("contextNum.font = """ & fontPt - 2 & "pt Arial"";")
-                    End If
-                Case "E":
-                    If o > RangeDiagMultTwo + RangeLen + RangeWid - 1 And o < RangeDiagMultTwo + RangeLen * 2 + RangeWid Then
-HtmlDo.WriteLine ("contextNum.font = ""bold " & fontPt - 2 & "pt Arial"";")
-                    Else
-HtmlDo.WriteLine ("contextNum.font = """ & fontPt - 2 & "pt Arial"";")
-                    End If
-                Case "F":
-                    If o > RangeDiagMultTwo + RangeLen * 2 + RangeWid - 1 And o < RangeDiagMultTwo + RangeLen * 2 + RangeWid * 2 Then
-HtmlDo.WriteLine ("contextNum.font = ""bold " & fontPt - 2 & "pt Arial"";")
-                    Else
-HtmlDo.WriteLine ("contextNum.font = """ & fontPt - 2 & "pt Arial"";")
-                    End If
-                Case Default:
-HtmlDo.WriteLine ("contextNum.font = """ & fontPt - 2 & "pt Arial"";")
-            End Select
-        End If
-        If NumArray(n) = "0" And NumArray(n + 1) = "0" Then
-HtmlDo.WriteLine ("contextNum.fillText(""0""," & NumArray(n) * mult + xSizeHalf & "," & NumArray(n + 1) * mult + ySizeHalf & ");")
-        Else
-HtmlDo.WriteLine ("contextNum.fillText(""" & NumArray(n + 2) & """," & NumArray(n) * mult + xSizeHalf & "," & NumArray(n + 1) * mult + ySizeHalf & ");")
-        End If
-        n = n + 3
-    Next
-
+HtmlDo.WriteLine ("    context.font = ""12pt Arial"";")
+HtmlDo.WriteLine ("    context.textAlign = ""left"";")
+HtmlDo.WriteLine ("    contextNum.font = ""12pt Arial"";")
+HtmlDo.WriteLine ("    contextNum.textAlign = ""left"";")
+HtmlDo.WriteLine ("    context.fillText(""Customer: " & CustVar & """, 0.06 * xSize, 0.06 * ySize * 0.25);")
+HtmlDo.WriteLine ("    context.fillText(""Plate ID: " & PlateVar & """, 0.06 * xSize, 0.06 * ySize * 0.5);")
+HtmlDo.WriteLine ("    context.fillText(""Plate SN: " & PlateSnVar & """, 0.06 * xSize, 0.06 * ySize * 0.75);")
+HtmlDo.WriteLine ("    context.fillText(""Plate Mfr: " & PlateMfrVar & """, 0.06 * xSize, 0.06 * ySize * 1);")
+HtmlDo.WriteLine ("    context.fillText(""Width: " & PlateWidth & """, 0.06 * xSize, 0.06 * ySize * 1.25);")
+HtmlDo.WriteLine ("    context.fillText(""Length: " & PlateLength & """, 0.06 * xSize, 0.06 * ySize * 1.5);")
+HtmlDo.WriteLine ("    context.fillText(""Center is Zero (0 µin) Elevation."", 0.06 * xSize, 0.06 * ySize * 1.75);")
+HtmlDo.WriteLine ("    context.fillText(""Reference Line (bold): " & ReferenceLine & """, 0.35 * xSize, 0.06 * ySize * 0.25);")
+HtmlDo.WriteLine ("    context.fillText(""Foot Size: " & FootSize & " in"", 0.35 * xSize, 0.06 * ySize * 0.5);")
+HtmlDo.WriteLine ("    context.fillText(""Border (X): " & BorderSizeX & " in"", 0.35 * xSize, 0.06 * ySize * 0.75);")
+HtmlDo.WriteLine ("    context.fillText(""Border (Y): " & BorderSizeY & " in"", 0.35 * xSize, 0.06 * ySize * 1);")
+HtmlDo.WriteLine ("    context.fillText(""Diagonal: " & DiagonalInches & " in"", 0.35 * xSize, 0.06 * ySize * 1.25);")
+HtmlDo.WriteLine ("    context.fillText(""Run Description: " & RunDescript & """, 0.65 * xSize, 0.06 * ySize * 0.25);")
+HtmlDo.WriteLine ("    context.fillText(""Grade: " & PlateGrade & """, 0.65 * xSize, 0.06 * ySize * 0.5);")
+HtmlDo.WriteLine ("    context.fillText(""Flatness: " & PlateFlatness & " µin"", 0.65 * xSize, 0.06 * ySize * 0.75);")
+HtmlDo.WriteLine ("    context.fillText(""Closure G: " & CloseG & """, 0.65 * xSize, 0.06 * ySize * 1);")
+HtmlDo.WriteLine ("    context.fillText(""Closure H: " & CloseH & """, 0.65 * xSize, 0.06 * ySize * 1.25);")
+HtmlDo.WriteLine ("    context.fillText(""Repeat: " & repeatVar & """, 0.65 * xSize, 0.06 * ySize * 1.5);")
+HtmlDo.WriteLine ("    context.fillText(""Certificate: " & CertNo & """, xSize * 0.06, ySize - (ySize * 0.06 * 0.25));")
+HtmlDo.WriteLine ("    context.fillText(""Technician: " & Tech & """, xSize * 0.35, ySize - (ySize * 0.06 * 0.25));")
+HtmlDo.WriteLine ("    context.fillText(""Date: " & DateVar & """, xSize * 0.65, ySize - (ySize * 0.06 * 0.25));")
+HtmlDo.WriteLine ("    context.fillText(""Page 1"", xSize * 0.9, ySize - (ySize * 0.06 * 0.25));")
+HtmlDo.WriteLine ("    contextNum.fillText(""Customer: " & CustVar & """, 0.06 * xSize, 0.06 * ySize * 0.25);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Plate ID: " & PlateVar & """, 0.06 * xSize, 0.06 * ySize * 0.5);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Plate SN: " & PlateSnVar & """, 0.06 * xSize, 0.06 * ySize * 0.75);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Plate Mfr: " & PlateMfrVar & """, 0.06 * xSize, 0.06 * ySize * 1);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Width: " & PlateWidth & """, 0.06 * xSize, 0.06 * ySize * 1.25);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Length: " & PlateLength & """, 0.06 * xSize, 0.06 * ySize * 1.5);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Center is Zero (0 µin) Elevation."", 0.06 * xSize, 0.06 * ySize * 1.75);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Reference Line (bold): " & ReferenceLine & """, 0.35 * xSize, 0.06 * ySize * 0.25);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Foot Size: " & FootSize & " in"", 0.35 * xSize, 0.06 * ySize * 0.5);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Border (X): " & BorderSizeX & " in"", 0.35 * xSize, 0.06 * ySize * 0.75);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Border (Y): " & BorderSizeY & " in"", 0.35 * xSize, 0.06 * ySize * 1);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Diagonal: " & DiagonalInches & " in"", 0.35 * xSize, 0.06 * ySize * 1.25);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Run Description: " & RunDescript & """, 0.65 * xSize, 0.06 * ySize * 0.25);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Grade: " & PlateGrade & """, 0.65 * xSize, 0.06 * ySize * 0.5);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Flatness: " & PlateFlatness & " µin"", 0.65 * xSize, 0.06 * ySize * 0.75);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Closure G: " & CloseG & """, 0.65 * xSize, 0.06 * ySize * 1);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Closure H: " & CloseH & """, 0.65 * xSize, 0.06 * ySize * 1.25);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Repeat: " & repeatVar & """, 0.65 * xSize, 0.06 * ySize * 1.5);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Certificate: " & CertNo & """, xSize * 0.06, ySize - (ySize * 0.06 * 0.25));")
+HtmlDo.WriteLine ("    contextNum.fillText(""Technician: " & Tech & """, xSize * 0.35, ySize - (ySize * 0.06 * 0.25));")
+HtmlDo.WriteLine ("    contextNum.fillText(""Date: " & DateVar & """, xSize * 0.65, ySize - (ySize * 0.06 * 0.25));")
+HtmlDo.WriteLine ("    contextNum.fillText(""Page 2"", xSize * 0.9, ySize - (ySize * 0.06 * 0.25));")
+    
+HtmlDo.WriteLine ("    zRotCos = Math.cos(zRot * Math.PI / 180);")
+HtmlDo.WriteLine ("    zRotSin = Math.sin(zRot * Math.PI / 180);")
+HtmlDo.WriteLine ("    xRotCos = Math.cos(xRot * Math.PI / 180);")
+HtmlDo.WriteLine ("    var AArray = [];")
+HtmlDo.WriteLine ("    var aotLine = [];")
+HtmlDo.WriteLine ("    for (i = 0; i < pDiag + 1; i += 1) {")
+HtmlDo.WriteLine ("        x = zRotDiagX * (diagLen * (pDiag - i) / pDiag);")
+HtmlDo.WriteLine ("        y = zRotDiagY * (diagLen * (pDiag - i) / pDiag);")
+HtmlDo.WriteLine ("        context.lineWidth = 1;")
+HtmlDo.WriteLine ("        contextNum.font = """ & fontpt & "pt Arial"";")
+HtmlDo.WriteLine ("        contextNum.textAlign = ""center"";")
+HtmlDo.WriteLine ("        if (Line1[i] == maxElev || Line1[i] == minElev) {")
+HtmlDo.WriteLine ("            contextNum.font = ""bold " & fontpt * 1.5 & "pt Arial"";")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        if (i == 0) {")
+HtmlDo.WriteLine ("            contextNum.fillText(Line1[i], (x - (pWid / 2)) * mult + (xSize / 2) + 10, (y + (pLen / 2)) * mult + (ySize / 2)) - 10;")
+HtmlDo.WriteLine ("        } else if (i == pDiag) {")
+HtmlDo.WriteLine ("            contextNum.fillText(Line1[i], (x - (pWid / 2)) * mult + (xSize / 2) - 10, (y + (pLen / 2)) * mult + (ySize / 2)) + 10;")
+HtmlDo.WriteLine ("        } else {")
+HtmlDo.WriteLine ("            contextNum.fillText(Line1[i], (x - (pWid / 2)) * mult + (xSize / 2), (y + (pLen / 2)) * mult + (ySize / 2));")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        xPrime = (x - pWid / 2) * zRotCos - (y + pLen / 2) * zRotSin;")
+HtmlDo.WriteLine ("        yPrime =  (x - pWid / 2) * zRotSin + (y + pLen / 2) * zRotCos;")
+HtmlDo.WriteLine ("        x = xPrime;")
+HtmlDo.WriteLine ("        y = yPrime;")
+HtmlDo.WriteLine ("        yPrime = y * xRotCos;")
+HtmlDo.WriteLine ("        y = yPrime;")
+HtmlDo.WriteLine ("        AArray.push((x * mult) + (xSize / 2));")
+HtmlDo.WriteLine ("        AArray.push((y * mult) + (ySize / 2) - ((Line1[i] - minElev) * zDiv));")
+HtmlDo.WriteLine ("        aotLine.push((x * mult) + (xSize / 2));")
+HtmlDo.WriteLine ("        aotLine.push((y * mult) + (ySize / 2));")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo((x * mult) + (xSize / 2), (y * mult) + (ySize / 2));")
+HtmlDo.WriteLine ("        context.lineTo((x * mult) + (xSize / 2), (y * mult) + (ySize / 2) - ((Line1[i] - minElev) * zDiv));")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("    }")
+HtmlDo.WriteLine ("    for (i = 0; i < AArray.length * 2 - 1; i += 2) {")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo(AArray[i], AArray[i + 1]);")
+HtmlDo.WriteLine ("        context.lineTo(AArray[i + 2], AArray[i + 3]);")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo(aotLine[i], aotLine[i + 1]);")
+HtmlDo.WriteLine ("        context.lineTo(aotLine[i + 2], aotLine[i + 3]);")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("    }")
+HtmlDo.WriteLine ("    var BArray = [];")
+HtmlDo.WriteLine ("    var botLine = [];")
+HtmlDo.WriteLine ("    for (i = 0; i < pDiag + 1; i += 1) {")
+HtmlDo.WriteLine ("        x = zRotDiagX * (diagLen * (pDiag - i) / pDiag);")
+HtmlDo.WriteLine ("        y = -pLen - (zRotDiagY * (diagLen * (pDiag - i) / pDiag));")
+HtmlDo.WriteLine ("        context.lineWidth = 1;")
+HtmlDo.WriteLine ("        contextNum.font = """ & fontpt & "pt Arial"";")
+HtmlDo.WriteLine ("        contextNum.textAlign = ""center"";")
+HtmlDo.WriteLine ("        if (Line2[i] == maxElev || Line2[i] == minElev) {")
+HtmlDo.WriteLine ("            contextNum.font = ""bold " & fontpt * 1.5 & "pt Arial"";")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        if (i == 0) {")
+HtmlDo.WriteLine ("            contextNum.fillText(Line2[i], (x - (pWid / 2)) * mult + (xSize / 2) + 10, (y + (pLen / 2)) * mult + (ySize / 2)) + 10;")
+HtmlDo.WriteLine ("        } else if (i == pDiag) {")
+HtmlDo.WriteLine ("            contextNum.fillText(Line2[i], (x - (pWid / 2)) * mult + (xSize / 2) - 10, (y + (pLen / 2)) * mult + (ySize / 2)) - 10;")
+HtmlDo.WriteLine ("        } else {")
+HtmlDo.WriteLine ("            contextNum.fillText(Line2[i], (x - (pWid / 2)) * mult + (xSize / 2), (y + (pLen / 2)) * mult + (ySize / 2));")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        xPrime = (x - pWid / 2) * zRotCos - (y + pLen / 2) * zRotSin;")
+HtmlDo.WriteLine ("        yPrime =  (x - pWid / 2) * zRotSin + (y + pLen / 2) * zRotCos;")
+HtmlDo.WriteLine ("        x = xPrime;")
+HtmlDo.WriteLine ("        y = yPrime;")
+HtmlDo.WriteLine ("        yPrime = y * xRotCos;")
+HtmlDo.WriteLine ("        y = yPrime;")
+HtmlDo.WriteLine ("        BArray.push((x * mult) + (xSize / 2));")
+HtmlDo.WriteLine ("        BArray.push((y * mult) + (ySize / 2) - ((Line2[i] - minElev) * zDiv));")
+HtmlDo.WriteLine ("        botLine.push((x * mult) + (xSize / 2));")
+HtmlDo.WriteLine ("        botLine.push((y * mult) + (ySize / 2));")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo((x * mult) + (xSize / 2), (y * mult) + (ySize / 2));")
+HtmlDo.WriteLine ("        context.lineTo((x * mult) + (xSize / 2), (y * mult) + (ySize / 2) - ((Line2[i] - minElev) * zDiv));")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("    }")
+HtmlDo.WriteLine ("    for (i = 0; i < BArray.length * 2 - 1; i += 2) {")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo(BArray[i], BArray[i + 1]);")
+HtmlDo.WriteLine ("        context.lineTo(BArray[i + 2], BArray[i + 3]);")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo(botLine[i], botLine[i + 1]);")
+HtmlDo.WriteLine ("        context.lineTo(botLine[i + 2], botLine[i + 3]);")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("    }")
+HtmlDo.WriteLine ("    var CArray = [];")
+HtmlDo.WriteLine ("    var cotLine = [];")
+HtmlDo.WriteLine ("    for (i = 0; i < pLen + 1; i += 1) {")
+HtmlDo.WriteLine ("        x = pWid;")
+HtmlDo.WriteLine ("        y = -i;")
+HtmlDo.WriteLine ("        if (RefLine == ""3"") {")
+HtmlDo.WriteLine ("            context.lineWidth = 3;")
+HtmlDo.WriteLine ("            contextNum.font = ""bold " & fontpt & "pt Arial"";")
+HtmlDo.WriteLine ("        } else {")
+HtmlDo.WriteLine ("            context.lineWidth = 1;")
+HtmlDo.WriteLine ("            contextNum.font = """ & fontpt & "pt Arial"";")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        if (Line3[i] == maxElev || Line3[i] == minElev) {")
+HtmlDo.WriteLine ("            contextNum.font = ""bold " & fontpt * 1.5 & "pt Arial"";")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        if (i == 0 || i == pLen || i == pLen / 2) {")
+HtmlDo.WriteLine ("            // Do not print -- Avoid confusion.")
+HtmlDo.WriteLine ("        } else {")
+HtmlDo.WriteLine ("            contextNum.textAlign = ""left"";")
+HtmlDo.WriteLine ("            contextNum.fillText(Line3[i], (x - (pWid / 2)) * mult + (xSize / 2) + 10, (y + (pLen / 2)) * mult + (ySize / 2));")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        xPrime = (x - pWid / 2) * zRotCos - (y + pLen / 2) * zRotSin;")
+HtmlDo.WriteLine ("        yPrime =  (x - pWid / 2) * zRotSin + (y + pLen / 2) * zRotCos;")
+HtmlDo.WriteLine ("        x = xPrime;")
+HtmlDo.WriteLine ("        y = yPrime;")
+HtmlDo.WriteLine ("        yPrime = y * xRotCos;")
+HtmlDo.WriteLine ("        y = yPrime;")
+HtmlDo.WriteLine ("        CArray.push((x * mult) + (xSize / 2));")
+HtmlDo.WriteLine ("        CArray.push((y * mult) + (ySize / 2) - ((Line3[i] - minElev) * zDiv));")
+HtmlDo.WriteLine ("        cotLine.push((x * mult) + (xSize / 2));")
+HtmlDo.WriteLine ("        cotLine.push((y * mult) + (ySize / 2));")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo((x * mult) + (xSize / 2), (y * mult) + (ySize / 2));")
+HtmlDo.WriteLine ("        context.lineTo((x * mult) + (xSize / 2), (y * mult) + (ySize / 2) - ((Line3[i] - minElev) * zDiv));")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("    }")
+HtmlDo.WriteLine ("    for (i = 0; i < CArray.length * 2 - 1; i += 2) {")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo(CArray[i], CArray[i + 1]);")
+HtmlDo.WriteLine ("        context.lineTo(CArray[i + 2], CArray[i + 3]);")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo(cotLine[i], cotLine[i + 1]);")
+HtmlDo.WriteLine ("        context.lineTo(cotLine[i + 2], cotLine[i + 3]);")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("    }")
+HtmlDo.WriteLine ("    var DArray = [];")
+HtmlDo.WriteLine ("    var dotLine = [];")
+HtmlDo.WriteLine ("    for (i = 0; i < pWid + 1; i += 1) {")
+HtmlDo.WriteLine ("        x = pWid - i;")
+HtmlDo.WriteLine ("        y = -pLen;")
+HtmlDo.WriteLine ("        contextNum.textAlign = ""center"";")
+HtmlDo.WriteLine ("        if (RefLine == ""4"") {")
+HtmlDo.WriteLine ("            context.lineWidth = 3;")
+HtmlDo.WriteLine ("            contextNum.font = ""bold " & fontpt & "pt Arial"";")
+HtmlDo.WriteLine ("        } else {")
+HtmlDo.WriteLine ("            context.lineWidth = 1;")
+HtmlDo.WriteLine ("            contextNum.font = """ & fontpt & "pt Arial"";")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        if (Line4[i] == maxElev || Line4[i] == minElev) {")
+HtmlDo.WriteLine ("            contextNum.font = ""bold " & fontpt * 1.5 & "pt Arial"";")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        if (i == 0 || i == pWid || i == pWid / 2) {")
+HtmlDo.WriteLine ("            // Do not print -- Avoid confusion. ")
+HtmlDo.WriteLine ("        } else {")
+HtmlDo.WriteLine ("            if ((i % 2) > 0) {")
+HtmlDo.WriteLine ("                contextNum.textBaseline = ""bottom"";")
+HtmlDo.WriteLine ("            } else {")
+HtmlDo.WriteLine ("                contextNum.textBaseline = ""top"";")
+HtmlDo.WriteLine ("            }")
+HtmlDo.WriteLine ("        contextNum.fillText(Line4[i], (x - (pWid / 2)) * mult + (xSize / 2), (y + (pLen / 2)) * mult + (ySize / 2) - 10);")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        xPrime = (x - pWid / 2) * zRotCos - (y + pLen / 2) * zRotSin;")
+HtmlDo.WriteLine ("        yPrime =  (x - pWid / 2) * zRotSin + (y + pLen / 2) * zRotCos;")
+HtmlDo.WriteLine ("        x = xPrime;")
+HtmlDo.WriteLine ("        y = yPrime;")
+HtmlDo.WriteLine ("        yPrime = y * xRotCos;")
+HtmlDo.WriteLine ("        y = yPrime;")
+HtmlDo.WriteLine ("        DArray.push((x * mult) + (xSize / 2));")
+HtmlDo.WriteLine ("        DArray.push((y * mult) + (ySize / 2) - ((Line4[i] - minElev) * zDiv));")
+HtmlDo.WriteLine ("        dotLine.push((x * mult) + (xSize / 2));")
+HtmlDo.WriteLine ("        dotLine.push((y * mult) + (ySize / 2));")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo((x * mult) + (xSize / 2), (y * mult) + (ySize / 2));")
+HtmlDo.WriteLine ("        context.lineTo((x * mult) + (xSize / 2), (y * mult) + (ySize / 2) - ((Line4[i] - minElev) * zDiv));")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("    }")
+HtmlDo.WriteLine ("    for (i = 0; i < DArray.length * 2 - 1; i += 2) {")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo(DArray[i], DArray[i + 1]);")
+HtmlDo.WriteLine ("        context.lineTo(DArray[i + 2], DArray[i + 3]);")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo(dotLine[i], dotLine[i + 1]);")
+HtmlDo.WriteLine ("        context.lineTo(dotLine[i + 2], dotLine[i + 3]);")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("    }")
+HtmlDo.WriteLine ("    var EArray = [];")
+HtmlDo.WriteLine ("    var eotLine = [];")
+HtmlDo.WriteLine ("    for (i = 0; i < pLen + 1; i += 1) {")
+HtmlDo.WriteLine ("        x = 0;")
+HtmlDo.WriteLine ("        y = i - pLen;")
+HtmlDo.WriteLine ("        if (RefLine == ""5"") {")
+HtmlDo.WriteLine ("            context.lineWidth = 3;")
+HtmlDo.WriteLine ("            contextNum.font = ""bold " & fontpt & "pt Arial"";")
+HtmlDo.WriteLine ("        } else {")
+HtmlDo.WriteLine ("            context.lineWidth = 1;")
+HtmlDo.WriteLine ("            contextNum.font = """ & fontpt & "pt Arial"";")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        if (Line5[i] == maxElev || Line5[i] == minElev) {")
+HtmlDo.WriteLine ("            contextNum.font = ""bold " & fontpt * 1.5 & "pt Arial"";")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        if (i == 0 || i == pLen || i == pLen / 2) {")
+HtmlDo.WriteLine ("            // Do not print -- Avoid confusion.")
+HtmlDo.WriteLine ("        } else {")
+HtmlDo.WriteLine ("            contextNum.textAlign = ""right"";")
+HtmlDo.WriteLine ("            contextNum.fillText(Line5[i], (x - (pWid / 2)) * mult + (xSize / 2) - 10, (y + (pLen / 2)) * mult + (ySize / 2));")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        xPrime = (x - pWid / 2) * zRotCos - (y + pLen / 2) * zRotSin;")
+HtmlDo.WriteLine ("        yPrime =  (x - pWid / 2) * zRotSin + (y + pLen / 2) * zRotCos;")
+HtmlDo.WriteLine ("        x = xPrime;")
+HtmlDo.WriteLine ("        y = yPrime;")
+HtmlDo.WriteLine ("        yPrime = y * xRotCos;")
+HtmlDo.WriteLine ("        y = yPrime;")
+HtmlDo.WriteLine ("        EArray.push((x * mult) + (xSize / 2));")
+HtmlDo.WriteLine ("        EArray.push((y * mult) + (ySize / 2) - ((Line5[i] - minElev) * zDiv));")
+HtmlDo.WriteLine ("        eotLine.push((x * mult) + (xSize / 2));")
+HtmlDo.WriteLine ("        eotLine.push((y * mult) + (ySize / 2));")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo((x * mult) + (xSize / 2), (y * mult) + (ySize / 2));")
+HtmlDo.WriteLine ("        context.lineTo((x * mult) + (xSize / 2), (y * mult) + (ySize / 2) - ((Line5[i] - minElev) * zDiv));")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("    }")
+HtmlDo.WriteLine ("    for (i = 0; i < EArray.length * 2 - 1; i += 2) {")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo(EArray[i], EArray[i + 1]);")
+HtmlDo.WriteLine ("        context.lineTo(EArray[i + 2], EArray[i + 3]);")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo(eotLine[i], eotLine[i + 1]);")
+HtmlDo.WriteLine ("        context.lineTo(eotLine[i + 2], eotLine[i + 3]);")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("    }")
+HtmlDo.WriteLine ("    var FArray = [];")
+HtmlDo.WriteLine ("    var fotLine = [];")
+HtmlDo.WriteLine ("    for (i = 0; i < pWid + 1; i += 1) {")
+HtmlDo.WriteLine ("        x = i;")
+HtmlDo.WriteLine ("        y = 0;")
+HtmlDo.WriteLine ("        contextNum.textAlign = ""center"";")
+HtmlDo.WriteLine ("        if (RefLine == ""6"") {")
+HtmlDo.WriteLine ("            context.lineWidth = 3;")
+HtmlDo.WriteLine ("            contextNum.font = ""bold " & fontpt & "pt Arial"";")
+HtmlDo.WriteLine ("        } else {")
+HtmlDo.WriteLine ("            context.lineWidth = 1;")
+HtmlDo.WriteLine ("            contextNum.font = """ & fontpt & "pt Arial"";")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        if (Line6[i] == maxElev || Line6[i] == minElev) {")
+HtmlDo.WriteLine ("            contextNum.font = ""bold " & fontpt * 1.5 & "pt Arial"";")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        if (i == 0 || i == pWid || i == pWid / 2) {")
+HtmlDo.WriteLine ("            // Do not print -- Avoid confusion. ")
+HtmlDo.WriteLine ("        } else {")
+HtmlDo.WriteLine ("            if ((i % 2) > 0) {")
+HtmlDo.WriteLine ("                contextNum.textBaseline = ""bottom"";")
+HtmlDo.WriteLine ("            } else {")
+HtmlDo.WriteLine ("                contextNum.textBaseline = ""top"";")
+HtmlDo.WriteLine ("            }")
+HtmlDo.WriteLine ("        contextNum.fillText(Line6[i], (x - (pWid / 2)) * mult + (xSize / 2), (y + (pLen / 2)) * mult + (ySize / 2) + 10);")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        xPrime = (x - pWid / 2) * zRotCos - (y + pLen / 2) * zRotSin;")
+HtmlDo.WriteLine ("        yPrime =  (x - pWid / 2) * zRotSin + (y + pLen / 2) * zRotCos;")
+HtmlDo.WriteLine ("        x = xPrime;")
+HtmlDo.WriteLine ("        y = yPrime;")
+HtmlDo.WriteLine ("        yPrime = y * xRotCos;")
+HtmlDo.WriteLine ("        y = yPrime;")
+HtmlDo.WriteLine ("        FArray.push((x * mult) + (xSize / 2));")
+HtmlDo.WriteLine ("        FArray.push((y * mult) + (ySize / 2) - ((Line6[i] - minElev) * zDiv));")
+HtmlDo.WriteLine ("        fotLine.push((x * mult) + (xSize / 2));")
+HtmlDo.WriteLine ("        fotLine.push((y * mult) + (ySize / 2));")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo((x * mult) + (xSize / 2), (y * mult) + (ySize / 2));")
+HtmlDo.WriteLine ("        context.lineTo((x * mult) + (xSize / 2), (y * mult) + (ySize / 2) - ((Line6[i] - minElev) * zDiv));")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("    }")
+HtmlDo.WriteLine ("    for (i = 0; i < FArray.length * 2 - 1; i += 2) {")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo(FArray[i], FArray[i + 1]);")
+HtmlDo.WriteLine ("        context.lineTo(FArray[i + 2], FArray[i + 3]);")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo(fotLine[i], fotLine[i + 1]);")
+HtmlDo.WriteLine ("        context.lineTo(fotLine[i + 2], fotLine[i + 3]);")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("    }")
+HtmlDo.WriteLine ("    var GArray = [];")
+HtmlDo.WriteLine ("    var gotLine = [];")
+HtmlDo.WriteLine ("    for (i = 0; i < pWid + 1; i += 1) {")
+HtmlDo.WriteLine ("        x = pWid - i;")
+HtmlDo.WriteLine ("        y = -pLen / 2;")
+HtmlDo.WriteLine ("        context.lineWidth = 1;")
+HtmlDo.WriteLine ("        contextNum.font = """ & fontpt & "pt Arial"";")
+HtmlDo.WriteLine ("        if (Line7[i] == maxElev || Line7[i] == minElev) {")
+HtmlDo.WriteLine ("            contextNum.font = ""bold " & fontpt * 1.5 & "pt Arial"";")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        if (i == 0 || i == pWid) {")
+HtmlDo.WriteLine ("            contextNum.textBaseline = ""alphabetic"";")
+HtmlDo.WriteLine ("        } else {")
+HtmlDo.WriteLine ("            if ((i % 2) > 0) {")
+HtmlDo.WriteLine ("                contextNum.textBaseline = ""top"";")
+HtmlDo.WriteLine ("            } else {")
+HtmlDo.WriteLine ("                contextNum.textBaseline = ""bottom"";")
+HtmlDo.WriteLine ("            }")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        if (x == pWid / 2) {")
+HtmlDo.WriteLine ("            // Don't print it. It gets ugly.")
+HtmlDo.WriteLine ("        } else {")
+HtmlDo.WriteLine ("            contextNum.fillText(Line7[i], (x - (pWid / 2)) * mult + (xSize / 2), (y + (pLen / 2)) * mult + (ySize / 2));")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        xPrime = (x - pWid / 2) * zRotCos - (y + pLen / 2) * zRotSin;")
+HtmlDo.WriteLine ("        yPrime =  (x - pWid / 2) * zRotSin + (y + pLen / 2) * zRotCos;")
+HtmlDo.WriteLine ("        x = xPrime;")
+HtmlDo.WriteLine ("        y = yPrime;")
+HtmlDo.WriteLine ("        yPrime = y * xRotCos;")
+HtmlDo.WriteLine ("        y = yPrime;")
+HtmlDo.WriteLine ("        GArray.push((x * mult) + (xSize / 2));")
+HtmlDo.WriteLine ("        GArray.push((y * mult) + (ySize / 2) - ((Line7[i] - minElev) * zDiv));")
+HtmlDo.WriteLine ("        gotLine.push((x * mult) + (xSize / 2));")
+HtmlDo.WriteLine ("        gotLine.push((y * mult) + (ySize / 2));")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo((x * mult) + (xSize / 2), (y * mult) + (ySize / 2));")
+HtmlDo.WriteLine ("        context.lineTo((x * mult) + (xSize / 2), (y * mult) + (ySize / 2) - ((Line7[i] - minElev) * zDiv));")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("    }")
+HtmlDo.WriteLine ("    for (i = 0; i < GArray.length * 2 - 1; i += 2) {")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo(GArray[i], GArray[i + 1]);")
+HtmlDo.WriteLine ("        context.lineTo(GArray[i + 2], GArray[i + 3]);")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo(gotLine[i], gotLine[i + 1]);")
+HtmlDo.WriteLine ("        context.lineTo(gotLine[i + 2], gotLine[i + 3]);")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("    }")
+HtmlDo.WriteLine ("    var HArray = [];")
+HtmlDo.WriteLine ("    var hotLine = [];")
+HtmlDo.WriteLine ("    for (i = 0; i < pLen + 1; i += 1) {")
+HtmlDo.WriteLine ("        x = pWid / 2;")
+HtmlDo.WriteLine ("        y = i - pLen;")
+HtmlDo.WriteLine ("        context.lineWidth = 1;")
+HtmlDo.WriteLine ("        contextNum.font = """ & fontpt & "pt Arial"";")
+HtmlDo.WriteLine ("        contextNum.textAlign = ""center"";")
+HtmlDo.WriteLine ("        if (Line8[i] == maxElev || Line8[i] == minElev) {")
+HtmlDo.WriteLine ("            contextNum.font = ""bold " & fontpt * 1.5 & "pt Arial"";")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        if (y == -pLen / 2) {")
+HtmlDo.WriteLine ("            // Don't Print it; It gets confusing.")
+HtmlDo.WriteLine ("        } else {")
+HtmlDo.WriteLine ("            contextNum.fillText(Line8[i], (x - (pWid / 2)) * mult + (xSize / 2), (y + (pLen / 2)) * mult + (ySize / 2));")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        xPrime = (x - pWid / 2) * zRotCos - (y + pLen / 2) * zRotSin;")
+HtmlDo.WriteLine ("        yPrime =  (x - pWid / 2) * zRotSin + (y + pLen / 2) * zRotCos;")
+HtmlDo.WriteLine ("        x = xPrime;")
+HtmlDo.WriteLine ("        y = yPrime;")
+HtmlDo.WriteLine ("        yPrime = y * xRotCos;")
+HtmlDo.WriteLine ("        y = yPrime;")
+HtmlDo.WriteLine ("        HArray.push((x * mult) + (xSize / 2));")
+HtmlDo.WriteLine ("        HArray.push((y * mult) + (ySize / 2) - ((Line8[i] - minElev) * zDiv));")
+HtmlDo.WriteLine ("        hotLine.push((x * mult) + (xSize / 2));")
+HtmlDo.WriteLine ("        hotLine.push((y * mult) + (ySize / 2));")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo((x * mult) + (xSize / 2), (y * mult) + (ySize / 2));")
+HtmlDo.WriteLine ("        context.lineTo((x * mult) + (xSize / 2), (y * mult) + (ySize / 2) - ((Line8[i] - minElev) * zDiv));")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("    }")
+HtmlDo.WriteLine ("    for (i = 0; i < HArray.length * 2 - 1; i += 2) {")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo(HArray[i], HArray[i + 1]);")
+HtmlDo.WriteLine ("        context.lineTo(HArray[i + 2], HArray[i + 3]);")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("        context.beginPath();")
+HtmlDo.WriteLine ("        context.moveTo(hotLine[i], hotLine[i + 1]);")
+HtmlDo.WriteLine ("        context.lineTo(hotLine[i + 2], hotLine[i + 3]);")
+HtmlDo.WriteLine ("        context.stroke();")
+HtmlDo.WriteLine ("    }")
+HtmlDo.WriteLine ("}")
+HtmlDo.WriteLine ("function zRotate() {")
+HtmlDo.WriteLine ("    var checkAngle = document.getElementById(""angleIn"").value;")
+HtmlDo.WriteLine ("    if (isNaN(checkAngle)) {")
+HtmlDo.WriteLine ("        window.alert(""Must enter a number."");")
+HtmlDo.WriteLine ("    } else {")
+HtmlDo.WriteLine ("        if (checkAngle == """") {")
+HtmlDo.WriteLine ("            zRot -= 5;")
+HtmlDo.WriteLine ("        } else {")
+HtmlDo.WriteLine ("            zRot = checkAngle;")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        context.clearRect(0, 0, xSize, ySize);")
+HtmlDo.WriteLine ("        contextNum.clearRect(0, 0, xSize, ySize);")
+HtmlDo.WriteLine ("        drawMap();")
+HtmlDo.WriteLine ("        document.getElementById(""angleIn"").value = """";")
+HtmlDo.WriteLine ("    }")
+HtmlDo.WriteLine ("}")
+HtmlDo.WriteLine ("drawMap();")
+HtmlDo.WriteLine ("document.getElementById(""angleGo"").addEventListener(""click"", zRotate);")
 HtmlDo.WriteLine ("</script>")
 HtmlDo.WriteLine ("</body>")
 HtmlDo.WriteLine ("</html>")
-        
-    
+
     Set HtmlFile = Nothing
     Set HtmlDo = Nothing
         
     Dim ie As Object
     Set ie = CreateObject("InternetExplorer.application")
     ie.Navigate ObjPath
+On Error Resume Next
     ie.Visible = True
     
     Set ie = Nothing
     
 Exit Sub
 
-ErrorHandler:
-
+ErrorHandle:
     MsgBox ("Export Terminated:" & vbNewLine & Err.Description)
-
+    
 End Sub
 
 Function BrowseForFolder(Optional OpenAt As Variant) As Variant
@@ -803,9 +682,9 @@ Function BrowseForFolder(Optional OpenAt As Variant) As Variant
      '\\ (as in \\servername\sharename.  All others are invalid
     Select Case Mid(BrowseForFolder, 2, 1)
     Case Is = ":"
-        If Left(BrowseForFolder, 1) = ":" Then GoTo Invalid
+        If left(BrowseForFolder, 1) = ":" Then GoTo Invalid
     Case Is = "\"
-        If Not Left(BrowseForFolder, 1) = "\" Then GoTo Invalid
+        If Not left(BrowseForFolder, 1) = "\" Then GoTo Invalid
     Case Else
         GoTo Invalid
     End Select
@@ -817,6 +696,4 @@ Invalid:
     BrowseForFolder = False
 End Function
 
-Private Sub CommandButton1_Click()
-    Call ExportHtml
-End Sub
+
