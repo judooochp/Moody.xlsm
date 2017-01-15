@@ -24,9 +24,9 @@ Make compatible with former versions of Excel (97-2003)
 
 Handle Customer Requirements/OOT conditions
 
-Large plates with large elevations: second Canvas numbers run over each other, especially on horizontal lines. Fix it.
+(Partially Complete 15Jan2017) Large plates with large elevations: second Canvas numbers run over each other, especially on horizontal lines. Fix it.
 
-  -(Partially Complete 15Jan2017) -- Defeat staggering for horizontal lines of smaller plates.
+  -(Needs Testing)-- Defeat staggering for horizontal lines of smaller plates.
 
 Make extensible to plates that are not standard sizes using the GGG-P-463C formula.
 _______________________________________________________________________________________________
