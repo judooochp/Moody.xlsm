@@ -23,11 +23,13 @@ Label graphic's Lines A-H
 Make compatible with former versions of Excel (97-2003)
 
 Handle Customer Requirements/OOT conditions
+
+Large plates with large elevations: second Canvas numbers run over each other, especially on horizontal lines. Fix it.
 _______________________________________________________________________________________________
 
 System Requirements:
 
-Microsoft Excel 2016 preferred, other versions may have formatting or functional inconsistencies.
+Microsoft Excel 2007 or later preferred, other versions may have formatting or functional inconsistencies.
 
 Macros must be enabled.
 
