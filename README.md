@@ -1,12 +1,10 @@
 # MoodyCanvas
-Wireframe Representations of Surface Plate Flatness Measurements using the Moody Method in MSExcel
+Wireframe Representations of Surface Plate Flatness Measurements using a Modified Moody Method in MSExcel to Export HTML Canvas Printables
 _______________________________________________________________________________________________
 
 Intended Updates:
 
 (Completed 14Jan2017) Place HTML textbox and button that changes angle of view (rotate Z axis)
-
--Requires exporting x,y,z coordinates and an entire Javascript function to do all the math in the browser, culminating in a clear() and redraw()
   
 (Completed 13Jan2017) Organize the different sheets in a way that makes sense to more than just Jake
 
