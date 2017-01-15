@@ -657,6 +657,13 @@ ErrorHandle:
     
 End Sub
 
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'   The following portion of code sourced from 
+'   http://www.vbaexpress.com/kb/getarticle.php?kb_id=284
+'   authored by Ken Puls in 2005
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 Function BrowseForFolder(Optional OpenAt As Variant) As Variant
      'Function purpose:  To Browser for a user selected folder.
      'If the "OpenAt" path is provided, open the browser at that directory
@@ -695,5 +702,3 @@ Invalid:
      'If it was determined that the selection was invalid, set to False
     BrowseForFolder = False
 End Function
-
-
