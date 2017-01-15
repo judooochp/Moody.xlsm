@@ -25,6 +25,8 @@ Make compatible with former versions of Excel (97-2003)
 Handle Customer Requirements/OOT conditions
 
 Large plates with large elevations: second Canvas numbers run over each other, especially on horizontal lines. Fix it.
+
+Make extensible to plates that are not standard sizes using the GGG-P-463C formula.
 _______________________________________________________________________________________________
 
 System Requirements:
