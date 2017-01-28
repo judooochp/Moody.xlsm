@@ -27,7 +27,7 @@ Handle Customer Requirements/OOT conditions
   -(Needs Testing)-- Defeat staggering for horizontal lines of smaller plates.
   -(15Jan2017)-- Expanded X dimension with ratio of (#diagonalMeasurements/#horixontalMeasurements)x0.85 on the multiplier for X axis values
 
-Make extensible to plates that are not standard sizes using the GGG-P-463C formula.
+(Completed 28Jan2017) Make extensible to plates that are not standard sizes using the GGG-P-463C formula.
 _______________________________________________________________________________________________
 
 System Requirements:
