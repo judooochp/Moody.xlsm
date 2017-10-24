@@ -10,7 +10,7 @@ Intended Updates:
 
   -Split Setup and Summary; place Summary after Line H
 
-Test Files for several sizes
+(Completed 23Oct2017) Test Files for several sizes
 
 Diffuse Closure error across Lines G and H to clean up graphic.
   -Make centerpoint Zero
@@ -28,6 +28,8 @@ Handle Customer Requirements/OOT conditions
   -(15Jan2017)-- Expanded X dimension with ratio of (#diagonalMeasurements/#horixontalMeasurements)x0.85 on the multiplier for X axis values
 
 (Completed 28Jan2017) Make extensible to plates that are not standard sizes using the GGG-P-463C formula.
+
+(Added 23Oct2017) Open HTML automatically. At the moment, it opens Explorer, but not the file.
 _______________________________________________________________________________________________
 
 System Requirements:
