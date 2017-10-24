@@ -1,93 +1,129 @@
-'''''''''''''''''''''''''''''''''''''''''''''''''''
-'   Copyright (c) 2017 Jacob Eugene Gilliam       '
-'                                                 '
-'   Do not copy, modify, or sell this software.   '
-'   No warranty is provided, express or implied   '
-'   by the use of this software.                  '
-'''''''''''''''''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'   Copyright (c) 2017 Jacob Eugene Gilliam                '
+'                                                          '
+'   Do not sell this software without giving me some love. '
+'   Do not modify this software without my name.           '
+'   No warranty is provided.                               '
+'                                                          '
+'   BrowseForFolder() was found online and is not mine:    '
+'   BrowseForFolder() sourced from                         '
+'   http://www.vbaexpress.com/kb/getarticle.php?kb_id=284  '
+'   authored by Ken Puls in 2005                           '
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+Public Type PlateType
+    Cust As String
+    ID As String
+    Serial As String
+    Mfr As String
+    Width As String
+    Length As String
+End Type
+    
+Public Type MapType
+    Spacing As String
+    BorderX As String
+    BorderY As String
+    DiagInches As String
+    Ref As String
+End Type
+
+Public Type RenderType
+    DPI As Integer
+    Width As Double
+    X As Double
+    Height As Double
+    Y As Double
+End Type
+
+Public Type RunType
+    Descr As String
+    Grade As String
+    Flatness As String
+    ClosureG As String
+    ClosureH As String
+End Type
+
+Public Type CertType
+    No As String
+    Repeat As String
+    Tech As String
+    Date As String
+End Type
 
 Public Sub ExportDynamicHtml()
 
 On Error GoTo ErrorHandle
-
-
+    
 '   Information about the plate and calibration that we'll _
     want to use later in math and output file headers.
-    Dim CustVar As String           '   Customer Name
-    Dim PlateVar As String          '   ID#
-    Dim PlateSnVar As String        '   Serial No
-    Dim PlateMfrVar As String       '   Manufacturer
-    Dim PlateWidth As String        '   Width in Inches
-    Dim PlateLength As String       '   Length in Inches
-    Dim FootSize As String          '   Carriage Mirror foot spacing
-    Dim BorderSizeX As String       '   Distance of lines D and F from edge ("margin")
-    Dim BorderSizeY As String       '   Distance of lines C and E from edge ("margin")
-    Dim DiagonalInches As String    '   Length of diagonal line (A or B)
-    Dim RunDescript As String       '   Description of this map's measurement, i.e. "Initial," "2nd," or "Final," etc.
-    Dim PlateGrade As String        '   "AA," "A," "B," "C," or "Non-Gradeable"
-    Dim PlateFlatness As String     '   Integer of highest value minus lowest value, in µ-inches
-    Dim CloseG As String            '   Closure error through center line G
-    Dim CloseH As String            '   Closure error through center line H
-    Dim repeatVar As String         '   Value entered for repeatability check, in µin
-    Dim CertNo As String            '   Workorder Number, from Benchtop
-    Dim Tech As String              '   Name of technician on certificate
-    Dim DateVar As String           '   Date of map generation (Excel's TODAY())
+    Dim Plate As PlateType
+    Dim Map As MapType
+    Dim Run As RunType
+    Dim Cert As CertType
     
-    DateVar = Worksheets("Setup").Range("F4")
-    CertNo = Worksheets("Setup").Range("F5")
-    Tech = Worksheets("Setup").Range("D6")
-    CustVar = Worksheets("Setup").Range("D4")
-    PlateVar = Worksheets("Setup").Range("D5")
-    PlateSnVar = Worksheets("Setup").Range("D9")
-    PlateMfrVar = Worksheets("Setup").Range("D8")
-    PlateWidth = Worksheets("Setup").Range("F8")
-    PlateLength = Worksheets("Setup").Range("F9")
-    FootSize = Worksheets("Setup").Range("F11")
-    BorderSizeX = Worksheets("Setup").Range("D12")
-    BorderSizeY = Worksheets("Setup").Range("D13")
-    DiagonalInches = Worksheets("Setup").Range("D14")
-    RunDescript = Worksheets("Setup").Range("F6")
-    PlateGrade = Worksheets("Summary").Range("P3")
-    PlateFlatness = Worksheets("Summary").Range("P4")
-    CloseG = Worksheets("Summary").Range("P8")
-    CloseH = Worksheets("Summary").Range("P9")
-    repeatVar = Worksheets("Summary").Range("P5")
+    Plate.Cust = Worksheets("Setup").Range("D4")
+    Plate.ID = Worksheets("Setup").Range("D5")
+    Plate.Serial = Worksheets("Setup").Range("D9")
+    Plate.Mfr = Worksheets("Setup").Range("D8")
+    Plate.Width = Worksheets("Setup").Range("F8")
+    Plate.Length = Worksheets("Setup").Range("F9")
+    Map.Spacing = Worksheets("Setup").Range("F11")      '  Carriage Mirror Foot Spacing
+    Map.BorderX = Worksheets("Setup").Range("D12")      '  Distance of lines 4 and 6 from edge ("margin")
+    Map.BorderY = Worksheets("Setup").Range("D13")      '  Distance of lines 3 and 5 from edge ("margin")
+    Map.DiagInches = Worksheets("Setup").Range("D14")   '  Length of diagonal map line, rather than plate diag
+    Run.Descr = Worksheets("Setup").Range("F6")
+    Run.Grade = Worksheets("Summary").Range("P3")
+    Run.Flatness = Worksheets("Summary").Range("P4")
+    Run.ClosureG = Worksheets("Summary").Range("P8")
+    Run.ClosureH = Worksheets("Summary").Range("P9")
+    Cert.Repeat = Worksheets("Summary").Range("P5") & " " & Worksheets("Summary").Range("Q5")
+    Cert.Date = Worksheets("Setup").Range("F4")
+    Cert.No = Worksheets("Setup").Range("F5")
+    Cert.Tech = Worksheets("Setup").Range("D6")
 
 ' Required values that I'd rather be subject to external control
-    Dim DPI As Integer
-    Dim pageWidth As Double
-    Dim xSize As Double
-    Dim pageHeight As Double
-    Dim ySize As Double
-    Dim ReferenceLine As String     'Side of the plate with Calibration Sticker. Will Bold.
-    ReferenceLine = Worksheets("Setup").Range("D11").Value
-    If ReferenceLine = "3" Or ReferenceLine = "4" Or ReferenceLine = "5" Or ReferenceLine = "6" Then
-        ' Do Nothing
-    Else
-        MsgBox ("You must enter the reference line (3, 4, 5, or 6)" & vbNewLine & _
-            "This is the side of the Plate you will place your Calibration Sticker.")
-        Worksheets("Setup").Activate
-        Worksheets("Setup").Range("D11").Select
-        Exit Sub
-    End If
-    DPI = 150
-    pageWidth = 7.5
-    pageHeight = 9
-    xSize = DPI * pageWidth
-    ySize = DPI * pageHeight
+    Dim Render As RenderType    '  Side of the plate with Calibration Sticker. Will Bold.
+    With Map
+        .Ref = Worksheets("Setup").Range("D11").Value
+        If .Ref = "3" Or .Ref = "4" Or .Ref = "5" Or .Ref = "6" Then
+            ' Do Nothing
+        Else
+            MsgBox ("You must enter the reference line (3, 4, 5, or 6)" & vbNewLine & _
+                "This is the side of the Plate you will place your Calibration Sticker.")
+            Worksheets("Setup").Activate
+            Worksheets("Setup").Range("D11").Select
+            Exit Sub
+        End If
+    End With
+    With Render
+        .DPI = 150
+        .Width = 7.5
+        .Height = 9
+        .X = .DPI * .Width
+        .Y = .DPI * .Height
+    End With
+    
     Dim fontpt As Double
     Dim diagCheck As Integer
     diagCheck = Worksheets("Setup").Range("F14")
-    If diagCheck > 30 Then
-        fontpt = 4 / diagCheck * DPI
-    ElseIf diagCheck < 10 Then
+    If diagCheck < 30 Then
         fontpt = 14
+    ElseIf diagCheck < 40 Then
+        fontpt = 12
+    ElseIf diagCheck < 50 Then
+        fontpt = 11.5
+    ElseIf diagCheck < 60 Then
+        fontpt = 11
+    ElseIf diagCheck < 70 Then
+        fontpt = 10.5
     Else
-        fontpt = 3 / diagCheck * DPI
+        fontpt = 10
     End If
 ' Browse for desired folder
-Dim ObjPath As String
-ObjPath = BrowseForFolder()
+Dim ObjPath As Variant
+                ObjPath = BrowseForFolder()
+'''''                ObjPath = "C:\Users\Jacob\OneDrive\Documents\Surface Plates\Tests"
 If ObjPath = False Then
     MsgBox ("We really need to know where to " & _
         vbNewLine & "store your file.")
@@ -98,9 +134,11 @@ End If
     Set HtmlFile = CreateObject("Scripting.FileSystemObject")
     Dim HtmlDo As Object
     Dim NameFile As String
-NameFile = InputBox("Filename?")
-ObjPath = ObjPath & "\" & NameFile & ".html"
-    Set HtmlDo = HtmlFile.CreateTextFile(ObjPath, True)
+    Dim FilePath As String
+'''''               NameFile = InputBox("Filename?")
+                NameFile = Worksheets("Setup").Range("D5")
+FilePath = ObjPath & "\" & NameFile & ".html"
+    Set HtmlDo = HtmlFile.CreateTextFile(FilePath, True)
 HtmlDo.WriteLine ("<!DOCTYPE HTML>")
 HtmlDo.WriteLine ("<html>")
 HtmlDo.WriteLine ("<head>")
@@ -148,6 +186,9 @@ HtmlDo.WriteLine ("var canvas = document.getElementById(""sPlate"");")
 HtmlDo.WriteLine ("var context = canvas.getContext(""2d"");")
 HtmlDo.WriteLine ("var canvasNum = document.getElementById(""sPlateNum"");")
 HtmlDo.WriteLine ("var contextNum = canvasNum.getContext(""2d"");")
+
+    Dim i As Integer
+    Dim o As Integer
 ' Line Loop; advances Sheet Number
     For i = 1 To 8
 ' Get number of angle measurements per sheet and add _
@@ -159,10 +200,10 @@ HtmlDo.WriteLine ("var Line" & i & " = [")
     for j=0 to worksheets("Sheet" & i).
         For j = 0 To o - 1
 ' Insert Z values in order, up to (not including) the last value
-HtmlDo.WriteLine ("        " & CInt(Sheets("Line " & i).Range("K" & j + 8).Value) & ",")
+HtmlDo.WriteLine ("        " & Sheets("Line " & i).Range("K" & j + 8).Value & ",")
         Next
 ' Insert last value with proper closer
-HtmlDo.WriteLine ("        " & CInt(Sheets("Line " & i).Range("K" & j + 8).Value) & "];")
+HtmlDo.WriteLine ("        " & Sheets("Line " & i).Range("K" & j + 8).Value & "];")
     Next
 HtmlDo.WriteLine ("var zRot = 15;")
 HtmlDo.WriteLine ("var xRot = 45;")
@@ -185,12 +226,23 @@ HtmlDo.WriteLine ("var mult = xSize / diagLen;")
 HtmlDo.WriteLine ("var zRotCos, zRotSin, xRotCos;")
 HtmlDo.WriteLine ("var zRotDiagX = Math.cos(2 * Math.PI - angle);")
 HtmlDo.WriteLine ("var zRotDiagY = Math.sin(2 * Math.PI - angle);")
-HtmlDo.WriteLine ("var RefLine = """ & ReferenceLine & """;")
+HtmlDo.WriteLine ("var RefLine = """ & Map.Ref & """;")
 HtmlDo.WriteLine ("var x;")
 HtmlDo.WriteLine ("var y;")
 HtmlDo.WriteLine ("var xPrime;")
 HtmlDo.WriteLine ("var yPrime;")
 HtmlDo.WriteLine ("var i;")
+HtmlDo.WriteLine ("function getBaseline() {")
+HtmlDo.WriteLine ("    if (pWid > 12 && maxElev > 999) {")
+HtmlDo.WriteLine ("        if ((i % 2) > 0) {")
+HtmlDo.WriteLine ("             contextNum.textBaseline = ""bottom"";")
+HtmlDo.WriteLine ("        } else {")
+HtmlDo.WriteLine ("            contextNum.textBaseline = ""top"";")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("    } else {")
+HtmlDo.WriteLine ("        contextNum.textBaseline = ""alphabetic"";")
+HtmlDo.WriteLine ("    }")
+HtmlDo.WriteLine ("}")
 HtmlDo.WriteLine ("function drawMap() {")
 HtmlDo.WriteLine ("    ""use strict"";")
 'HtmlDo.WriteLine ("context.beginPath();")
@@ -198,49 +250,49 @@ HtmlDo.WriteLine ("    context.font = ""12pt Arial"";")
 HtmlDo.WriteLine ("    context.textAlign = ""left"";")
 HtmlDo.WriteLine ("    contextNum.font = ""12pt Arial"";")
 HtmlDo.WriteLine ("    contextNum.textAlign = ""left"";")
-HtmlDo.WriteLine ("    context.fillText(""Customer: " & CustVar & """, 0.06 * xSize, 0.06 * ySize * 0.25);")
-HtmlDo.WriteLine ("    context.fillText(""Plate ID: " & PlateVar & """, 0.06 * xSize, 0.06 * ySize * 0.5);")
-HtmlDo.WriteLine ("    context.fillText(""Plate SN: " & PlateSnVar & """, 0.06 * xSize, 0.06 * ySize * 0.75);")
-HtmlDo.WriteLine ("    context.fillText(""Plate Mfr: " & PlateMfrVar & """, 0.06 * xSize, 0.06 * ySize * 1);")
-HtmlDo.WriteLine ("    context.fillText(""Width: " & PlateWidth & """, 0.06 * xSize, 0.06 * ySize * 1.25);")
-HtmlDo.WriteLine ("    context.fillText(""Length: " & PlateLength & """, 0.06 * xSize, 0.06 * ySize * 1.5);")
+HtmlDo.WriteLine ("    context.fillText(""Customer: " & Plate.Cust & """, 0.06 * xSize, 0.06 * ySize * 0.25);")
+HtmlDo.WriteLine ("    context.fillText(""Plate ID: " & Plate.ID & """, 0.06 * xSize, 0.06 * ySize * 0.5);")
+HtmlDo.WriteLine ("    context.fillText(""Plate SN: " & Plate.Serial & """, 0.06 * xSize, 0.06 * ySize * 0.75);")
+HtmlDo.WriteLine ("    context.fillText(""Plate Mfr: " & Plate.Mfr & """, 0.06 * xSize, 0.06 * ySize * 1);")
+HtmlDo.WriteLine ("    context.fillText(""Width: " & Plate.Width & """, 0.06 * xSize, 0.06 * ySize * 1.25);")
+HtmlDo.WriteLine ("    context.fillText(""Length: " & Plate.Length & """, 0.06 * xSize, 0.06 * ySize * 1.5);")
 HtmlDo.WriteLine ("    context.fillText(""Center is Zero (0 µin) Elevation."", 0.06 * xSize, 0.06 * ySize * 1.75);")
-HtmlDo.WriteLine ("    context.fillText(""Reference Line (bold): " & ReferenceLine & """, 0.35 * xSize, 0.06 * ySize * 0.25);")
-HtmlDo.WriteLine ("    context.fillText(""Foot Size: " & FootSize & " in"", 0.35 * xSize, 0.06 * ySize * 0.5);")
-HtmlDo.WriteLine ("    context.fillText(""Border (X): " & BorderSizeX & " in"", 0.35 * xSize, 0.06 * ySize * 0.75);")
-HtmlDo.WriteLine ("    context.fillText(""Border (Y): " & BorderSizeY & " in"", 0.35 * xSize, 0.06 * ySize * 1);")
-HtmlDo.WriteLine ("    context.fillText(""Diagonal: " & DiagonalInches & " in"", 0.35 * xSize, 0.06 * ySize * 1.25);")
-HtmlDo.WriteLine ("    context.fillText(""Run Description: " & RunDescript & """, 0.65 * xSize, 0.06 * ySize * 0.25);")
-HtmlDo.WriteLine ("    context.fillText(""Grade: " & PlateGrade & """, 0.65 * xSize, 0.06 * ySize * 0.5);")
-HtmlDo.WriteLine ("    context.fillText(""Flatness: " & PlateFlatness & " µin"", 0.65 * xSize, 0.06 * ySize * 0.75);")
-HtmlDo.WriteLine ("    context.fillText(""Closure G: " & CloseG & """, 0.65 * xSize, 0.06 * ySize * 1);")
-HtmlDo.WriteLine ("    context.fillText(""Closure H: " & CloseH & """, 0.65 * xSize, 0.06 * ySize * 1.25);")
-HtmlDo.WriteLine ("    context.fillText(""Repeat: " & repeatVar & """, 0.65 * xSize, 0.06 * ySize * 1.5);")
-HtmlDo.WriteLine ("    context.fillText(""Certificate: " & CertNo & """, xSize * 0.06, ySize - (ySize * 0.06 * 0.25));")
-HtmlDo.WriteLine ("    context.fillText(""Technician: " & Tech & """, xSize * 0.35, ySize - (ySize * 0.06 * 0.25));")
-HtmlDo.WriteLine ("    context.fillText(""Date: " & DateVar & """, xSize * 0.65, ySize - (ySize * 0.06 * 0.25));")
+HtmlDo.WriteLine ("    context.fillText(""Reference Line (bold): " & Map.Ref & """, 0.35 * xSize, 0.06 * ySize * 0.25);")
+HtmlDo.WriteLine ("    context.fillText(""Foot Size: " & Map.Spacing & " in"", 0.35 * xSize, 0.06 * ySize * 0.5);")
+HtmlDo.WriteLine ("    context.fillText(""Border (X): " & Map.BorderX & " in"", 0.35 * xSize, 0.06 * ySize * 0.75);")
+HtmlDo.WriteLine ("    context.fillText(""Border (Y): " & Map.BorderY & " in"", 0.35 * xSize, 0.06 * ySize * 1);")
+HtmlDo.WriteLine ("    context.fillText(""Diagonal: " & Map.DiagInches & " in"", 0.35 * xSize, 0.06 * ySize * 1.25);")
+HtmlDo.WriteLine ("    context.fillText(""Run Description: " & Run.Descr & """, 0.65 * xSize, 0.06 * ySize * 0.25);")
+HtmlDo.WriteLine ("    context.fillText(""Grade: " & Run.Grade & """, 0.65 * xSize, 0.06 * ySize * 0.5);")
+HtmlDo.WriteLine ("    context.fillText(""Flatness: " & Run.Flatness & """, 0.65 * xSize, 0.06 * ySize * 0.75);")
+HtmlDo.WriteLine ("    context.fillText(""Closure G: " & Run.ClosureG & """, 0.65 * xSize, 0.06 * ySize * 1);")
+HtmlDo.WriteLine ("    context.fillText(""Closure H: " & Run.ClosureH & """, 0.65 * xSize, 0.06 * ySize * 1.25);")
+HtmlDo.WriteLine ("    context.fillText(""Repeat: " & Cert.Repeat & """, 0.65 * xSize, 0.06 * ySize * 1.5);")
+HtmlDo.WriteLine ("    context.fillText(""Certificate: " & Cert.No & """, xSize * 0.06, ySize - (ySize * 0.06 * 0.25));")
+HtmlDo.WriteLine ("    context.fillText(""Technician: " & Cert.Tech & """, xSize * 0.35, ySize - (ySize * 0.06 * 0.25));")
+HtmlDo.WriteLine ("    context.fillText(""Date: " & Cert.Date & """, xSize * 0.65, ySize - (ySize * 0.06 * 0.25));")
 HtmlDo.WriteLine ("    context.fillText(""Page 1"", xSize * 0.9, ySize - (ySize * 0.06 * 0.25));")
-HtmlDo.WriteLine ("    contextNum.fillText(""Customer: " & CustVar & """, 0.06 * xSize, 0.06 * ySize * 0.25);")
-HtmlDo.WriteLine ("    contextNum.fillText(""Plate ID: " & PlateVar & """, 0.06 * xSize, 0.06 * ySize * 0.5);")
-HtmlDo.WriteLine ("    contextNum.fillText(""Plate SN: " & PlateSnVar & """, 0.06 * xSize, 0.06 * ySize * 0.75);")
-HtmlDo.WriteLine ("    contextNum.fillText(""Plate Mfr: " & PlateMfrVar & """, 0.06 * xSize, 0.06 * ySize * 1);")
-HtmlDo.WriteLine ("    contextNum.fillText(""Width: " & PlateWidth & """, 0.06 * xSize, 0.06 * ySize * 1.25);")
-HtmlDo.WriteLine ("    contextNum.fillText(""Length: " & PlateLength & """, 0.06 * xSize, 0.06 * ySize * 1.5);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Customer: " & Plate.Cust & """, 0.06 * xSize, 0.06 * ySize * 0.25);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Plate ID: " & Plate.ID & """, 0.06 * xSize, 0.06 * ySize * 0.5);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Plate SN: " & Plate.Serial & """, 0.06 * xSize, 0.06 * ySize * 0.75);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Plate Mfr: " & Plate.Mfr & """, 0.06 * xSize, 0.06 * ySize * 1);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Width: " & Plate.Width & """, 0.06 * xSize, 0.06 * ySize * 1.25);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Length: " & Plate.Length & """, 0.06 * xSize, 0.06 * ySize * 1.5);")
 HtmlDo.WriteLine ("    contextNum.fillText(""Center is Zero (0 µin) Elevation."", 0.06 * xSize, 0.06 * ySize * 1.75);")
-HtmlDo.WriteLine ("    contextNum.fillText(""Reference Line (bold): " & ReferenceLine & """, 0.35 * xSize, 0.06 * ySize * 0.25);")
-HtmlDo.WriteLine ("    contextNum.fillText(""Foot Size: " & FootSize & " in"", 0.35 * xSize, 0.06 * ySize * 0.5);")
-HtmlDo.WriteLine ("    contextNum.fillText(""Border (X): " & BorderSizeX & " in"", 0.35 * xSize, 0.06 * ySize * 0.75);")
-HtmlDo.WriteLine ("    contextNum.fillText(""Border (Y): " & BorderSizeY & " in"", 0.35 * xSize, 0.06 * ySize * 1);")
-HtmlDo.WriteLine ("    contextNum.fillText(""Diagonal: " & DiagonalInches & " in"", 0.35 * xSize, 0.06 * ySize * 1.25);")
-HtmlDo.WriteLine ("    contextNum.fillText(""Run Description: " & RunDescript & """, 0.65 * xSize, 0.06 * ySize * 0.25);")
-HtmlDo.WriteLine ("    contextNum.fillText(""Grade: " & PlateGrade & """, 0.65 * xSize, 0.06 * ySize * 0.5);")
-HtmlDo.WriteLine ("    contextNum.fillText(""Flatness: " & PlateFlatness & " µin"", 0.65 * xSize, 0.06 * ySize * 0.75);")
-HtmlDo.WriteLine ("    contextNum.fillText(""Closure G: " & CloseG & """, 0.65 * xSize, 0.06 * ySize * 1);")
-HtmlDo.WriteLine ("    contextNum.fillText(""Closure H: " & CloseH & """, 0.65 * xSize, 0.06 * ySize * 1.25);")
-HtmlDo.WriteLine ("    contextNum.fillText(""Repeat: " & repeatVar & """, 0.65 * xSize, 0.06 * ySize * 1.5);")
-HtmlDo.WriteLine ("    contextNum.fillText(""Certificate: " & CertNo & """, xSize * 0.06, ySize - (ySize * 0.06 * 0.25));")
-HtmlDo.WriteLine ("    contextNum.fillText(""Technician: " & Tech & """, xSize * 0.35, ySize - (ySize * 0.06 * 0.25));")
-HtmlDo.WriteLine ("    contextNum.fillText(""Date: " & DateVar & """, xSize * 0.65, ySize - (ySize * 0.06 * 0.25));")
+HtmlDo.WriteLine ("    contextNum.fillText(""Reference Line (bold): " & Map.Ref & """, 0.35 * xSize, 0.06 * ySize * 0.25);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Foot Size: " & Map.Spacing & " in"", 0.35 * xSize, 0.06 * ySize * 0.5);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Border (X): " & Map.BorderX & " in"", 0.35 * xSize, 0.06 * ySize * 0.75);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Border (Y): " & Map.BorderY & " in"", 0.35 * xSize, 0.06 * ySize * 1);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Diagonal: " & Map.DiagInches & " in"", 0.35 * xSize, 0.06 * ySize * 1.25);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Run Description: " & Run.Descr & """, 0.65 * xSize, 0.06 * ySize * 0.25);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Grade: " & Run.Grade & """, 0.65 * xSize, 0.06 * ySize * 0.5);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Flatness: " & Run.Flatness & """, 0.65 * xSize, 0.06 * ySize * 0.75);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Closure G: " & Run.ClosureG & """, 0.65 * xSize, 0.06 * ySize * 1);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Closure H: " & Run.ClosureH & """, 0.65 * xSize, 0.06 * ySize * 1.25);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Repeat: " & Cert.Repeat & """, 0.65 * xSize, 0.06 * ySize * 1.5);")
+HtmlDo.WriteLine ("    contextNum.fillText(""Certificate: " & Cert.No & """, xSize * 0.06, ySize - (ySize * 0.06 * 0.25));")
+HtmlDo.WriteLine ("    contextNum.fillText(""Technician: " & Cert.Tech & """, xSize * 0.35, ySize - (ySize * 0.06 * 0.25));")
+HtmlDo.WriteLine ("    contextNum.fillText(""Date: " & Cert.Date & """, xSize * 0.65, ySize - (ySize * 0.06 * 0.25));")
 HtmlDo.WriteLine ("    contextNum.fillText(""Page 2"", xSize * 0.9, ySize - (ySize * 0.06 * 0.25));")
     
 HtmlDo.WriteLine ("    zRotCos = Math.cos(zRot * Math.PI / 180);")
@@ -253,16 +305,22 @@ HtmlDo.WriteLine ("        x = zRotDiagX * (diagLen * (pDiag - i) / pDiag);")
 HtmlDo.WriteLine ("        y = zRotDiagY * (diagLen * (pDiag - i) / pDiag);")
 HtmlDo.WriteLine ("        context.lineWidth = 1;")
 HtmlDo.WriteLine ("        contextNum.font = """ & fontpt & "pt Arial"";")
-HtmlDo.WriteLine ("        contextNum.textAlign = ""center"";")
 HtmlDo.WriteLine ("        if (Line1[i] == maxElev || Line1[i] == minElev) {")
 HtmlDo.WriteLine ("            contextNum.font = ""bold " & fontpt * 1.5 & "pt Arial"";")
 HtmlDo.WriteLine ("        }")
-HtmlDo.WriteLine ("        if (i == 0) {")
-HtmlDo.WriteLine ("            contextNum.fillText(Line1[i], (x - (pWid / 2)) * mult + (xSize / 2) + 10, (y + (pLen / 2)) * mult + (ySize / 2)) - 10;")
-HtmlDo.WriteLine ("        } else if (i == pDiag) {")
-HtmlDo.WriteLine ("            contextNum.fillText(Line1[i], (x - (pWid / 2)) * mult + (xSize / 2) - 10, (y + (pLen / 2)) * mult + (ySize / 2)) + 10;")
+HtmlDo.WriteLine ("        if (i > pDiag * 0.3 && i < pDiag * 0.5) {")
+HtmlDo.WriteLine ("            contextNum.textAlign = ""left"";")
+HtmlDo.WriteLine ("        } else if (i < pDiag * 0.7 && i > pDiag * 0.5) {")
+HtmlDo.WriteLine ("            contextNum.textAlign = ""right"";")
 HtmlDo.WriteLine ("        } else {")
-HtmlDo.WriteLine ("            contextNum.fillText(Line1[i], (x - (pWid / 2)) * mult + (xSize / 2), (y + (pLen / 2)) * mult + (ySize / 2));")
+HtmlDo.WriteLine ("            contextNum.textAlign = ""center"";")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        if (i == 0) {")
+HtmlDo.WriteLine ("            contextNum.fillText(Line1[i], (x - (pWid / 2)) * (mult / " & Plate.Width & " * " & Map.DiagInches & " * 0.85) + (xSize / 2) + 10, (y + (pLen / 2)) * mult + (ySize / 2)) - 10;")
+HtmlDo.WriteLine ("        } else if (i == pDiag) {")
+HtmlDo.WriteLine ("            contextNum.fillText(Line1[i], (x - (pWid / 2)) * (mult / " & Plate.Width & " * " & Map.DiagInches & " * 0.85) + (xSize / 2) - 10, (y + (pLen / 2)) * mult + (ySize / 2)) + 10;")
+HtmlDo.WriteLine ("        } else {")
+HtmlDo.WriteLine ("            contextNum.fillText(Line1[i], (x - (pWid / 2)) * (mult / " & Plate.Width & " * " & Map.DiagInches & " * 0.85) + (xSize / 2), (y + (pLen / 2)) * mult + (ySize / 2));")
 HtmlDo.WriteLine ("        }")
 HtmlDo.WriteLine ("        xPrime = (x - pWid / 2) * zRotCos - (y + pLen / 2) * zRotSin;")
 HtmlDo.WriteLine ("        yPrime =  (x - pWid / 2) * zRotSin + (y + pLen / 2) * zRotCos;")
@@ -296,16 +354,22 @@ HtmlDo.WriteLine ("        x = zRotDiagX * (diagLen * (pDiag - i) / pDiag);")
 HtmlDo.WriteLine ("        y = -pLen - (zRotDiagY * (diagLen * (pDiag - i) / pDiag));")
 HtmlDo.WriteLine ("        context.lineWidth = 1;")
 HtmlDo.WriteLine ("        contextNum.font = """ & fontpt & "pt Arial"";")
-HtmlDo.WriteLine ("        contextNum.textAlign = ""center"";")
 HtmlDo.WriteLine ("        if (Line2[i] == maxElev || Line2[i] == minElev) {")
 HtmlDo.WriteLine ("            contextNum.font = ""bold " & fontpt * 1.5 & "pt Arial"";")
 HtmlDo.WriteLine ("        }")
-HtmlDo.WriteLine ("        if (i == 0) {")
-HtmlDo.WriteLine ("            contextNum.fillText(Line2[i], (x - (pWid / 2)) * mult + (xSize / 2) + 10, (y + (pLen / 2)) * mult + (ySize / 2)) + 10;")
-HtmlDo.WriteLine ("        } else if (i == pDiag) {")
-HtmlDo.WriteLine ("            contextNum.fillText(Line2[i], (x - (pWid / 2)) * mult + (xSize / 2) - 10, (y + (pLen / 2)) * mult + (ySize / 2)) - 10;")
+HtmlDo.WriteLine ("        if (i > pDiag * 0.3 && i < pDiag * 0.5) {")
+HtmlDo.WriteLine ("            contextNum.textAlign = ""left"";")
+HtmlDo.WriteLine ("        } else if (i < pDiag * 0.7 && i > pDiag * 0.5) {")
+HtmlDo.WriteLine ("            contextNum.textAlign = ""right"";")
 HtmlDo.WriteLine ("        } else {")
-HtmlDo.WriteLine ("            contextNum.fillText(Line2[i], (x - (pWid / 2)) * mult + (xSize / 2), (y + (pLen / 2)) * mult + (ySize / 2));")
+HtmlDo.WriteLine ("            contextNum.textAlign = ""center"";")
+HtmlDo.WriteLine ("        }")
+HtmlDo.WriteLine ("        if (i == 0) {")
+HtmlDo.WriteLine ("            contextNum.fillText(Line2[i], (x - (pWid / 2)) * (mult / " & Plate.Width & " * " & Map.DiagInches & " * 0.85) + (xSize / 2) + 10, (y + (pLen / 2)) * mult + (ySize / 2)) + 10;")
+HtmlDo.WriteLine ("        } else if (i == pDiag) {")
+HtmlDo.WriteLine ("            contextNum.fillText(Line2[i], (x - (pWid / 2)) * (mult / " & Plate.Width & " * " & Map.DiagInches & " * 0.85) + (xSize / 2) - 10, (y + (pLen / 2)) * mult + (ySize / 2)) - 10;")
+HtmlDo.WriteLine ("        } else {")
+HtmlDo.WriteLine ("            contextNum.fillText(Line2[i], (x - (pWid / 2)) * (mult / " & Plate.Width & " * " & Map.DiagInches & " * 0.85) + (xSize / 2), (y + (pLen / 2)) * mult + (ySize / 2));")
 HtmlDo.WriteLine ("        }")
 HtmlDo.WriteLine ("        xPrime = (x - pWid / 2) * zRotCos - (y + pLen / 2) * zRotSin;")
 HtmlDo.WriteLine ("        yPrime =  (x - pWid / 2) * zRotSin + (y + pLen / 2) * zRotCos;")
@@ -351,7 +415,7 @@ HtmlDo.WriteLine ("        if (i == 0 || i == pLen || i == pLen / 2) {")
 HtmlDo.WriteLine ("            // Do not print -- Avoid confusion.")
 HtmlDo.WriteLine ("        } else {")
 HtmlDo.WriteLine ("            contextNum.textAlign = ""left"";")
-HtmlDo.WriteLine ("            contextNum.fillText(Line3[i], (x - (pWid / 2)) * mult + (xSize / 2) + 10, (y + (pLen / 2)) * mult + (ySize / 2));")
+HtmlDo.WriteLine ("            contextNum.fillText(Line3[i], (x - (pWid / 2)) * (mult / " & Plate.Width & " * " & Map.DiagInches & " * 0.85) + (xSize / 2) + 10, (y + (pLen / 2)) * mult + (ySize / 2));")
 HtmlDo.WriteLine ("        }")
 HtmlDo.WriteLine ("        xPrime = (x - pWid / 2) * zRotCos - (y + pLen / 2) * zRotSin;")
 HtmlDo.WriteLine ("        yPrime =  (x - pWid / 2) * zRotSin + (y + pLen / 2) * zRotCos;")
@@ -397,12 +461,8 @@ HtmlDo.WriteLine ("        }")
 HtmlDo.WriteLine ("        if (i == 0 || i == pWid || i == pWid / 2) {")
 HtmlDo.WriteLine ("            // Do not print -- Avoid confusion. ")
 HtmlDo.WriteLine ("        } else {")
-HtmlDo.WriteLine ("            if ((i % 2) > 0) {")
-HtmlDo.WriteLine ("                contextNum.textBaseline = ""bottom"";")
-HtmlDo.WriteLine ("            } else {")
-HtmlDo.WriteLine ("                contextNum.textBaseline = ""top"";")
-HtmlDo.WriteLine ("            }")
-HtmlDo.WriteLine ("        contextNum.fillText(Line4[i], (x - (pWid / 2)) * mult + (xSize / 2), (y + (pLen / 2)) * mult + (ySize / 2) - 10);")
+HtmlDo.WriteLine ("            contextNum.textBaseline = getBaseline();")
+HtmlDo.WriteLine ("        contextNum.fillText(Line4[i], (x - (pWid / 2)) * (mult / " & Plate.Width & " * " & Map.DiagInches & " * 0.85) + (xSize / 2), (y + (pLen / 2)) * mult + (ySize / 2) - 10);")
 HtmlDo.WriteLine ("        }")
 HtmlDo.WriteLine ("        xPrime = (x - pWid / 2) * zRotCos - (y + pLen / 2) * zRotSin;")
 HtmlDo.WriteLine ("        yPrime =  (x - pWid / 2) * zRotSin + (y + pLen / 2) * zRotCos;")
@@ -448,7 +508,7 @@ HtmlDo.WriteLine ("        if (i == 0 || i == pLen || i == pLen / 2) {")
 HtmlDo.WriteLine ("            // Do not print -- Avoid confusion.")
 HtmlDo.WriteLine ("        } else {")
 HtmlDo.WriteLine ("            contextNum.textAlign = ""right"";")
-HtmlDo.WriteLine ("            contextNum.fillText(Line5[i], (x - (pWid / 2)) * mult + (xSize / 2) - 10, (y + (pLen / 2)) * mult + (ySize / 2));")
+HtmlDo.WriteLine ("            contextNum.fillText(Line5[i], (x - (pWid / 2)) * (mult / " & Plate.Width & " * " & Map.DiagInches & " * 0.85) + (xSize / 2) - 10, (y + (pLen / 2)) * mult + (ySize / 2));")
 HtmlDo.WriteLine ("        }")
 HtmlDo.WriteLine ("        xPrime = (x - pWid / 2) * zRotCos - (y + pLen / 2) * zRotSin;")
 HtmlDo.WriteLine ("        yPrime =  (x - pWid / 2) * zRotSin + (y + pLen / 2) * zRotCos;")
@@ -494,12 +554,8 @@ HtmlDo.WriteLine ("        }")
 HtmlDo.WriteLine ("        if (i == 0 || i == pWid || i == pWid / 2) {")
 HtmlDo.WriteLine ("            // Do not print -- Avoid confusion. ")
 HtmlDo.WriteLine ("        } else {")
-HtmlDo.WriteLine ("            if ((i % 2) > 0) {")
-HtmlDo.WriteLine ("                contextNum.textBaseline = ""bottom"";")
-HtmlDo.WriteLine ("            } else {")
-HtmlDo.WriteLine ("                contextNum.textBaseline = ""top"";")
-HtmlDo.WriteLine ("            }")
-HtmlDo.WriteLine ("        contextNum.fillText(Line6[i], (x - (pWid / 2)) * mult + (xSize / 2), (y + (pLen / 2)) * mult + (ySize / 2) + 10);")
+HtmlDo.WriteLine ("            contextNum.textBaseline = getBaseline();")
+HtmlDo.WriteLine ("        contextNum.fillText(Line6[i], (x - (pWid / 2)) * (mult / " & Plate.Width & " * " & Map.DiagInches & " * 0.85) + (xSize / 2), (y + (pLen / 2)) * mult + (ySize / 2) + 10);")
 HtmlDo.WriteLine ("        }")
 HtmlDo.WriteLine ("        xPrime = (x - pWid / 2) * zRotCos - (y + pLen / 2) * zRotSin;")
 HtmlDo.WriteLine ("        yPrime =  (x - pWid / 2) * zRotSin + (y + pLen / 2) * zRotCos;")
@@ -539,16 +595,12 @@ HtmlDo.WriteLine ("        }")
 HtmlDo.WriteLine ("        if (i == 0 || i == pWid) {")
 HtmlDo.WriteLine ("            contextNum.textBaseline = ""alphabetic"";")
 HtmlDo.WriteLine ("        } else {")
-HtmlDo.WriteLine ("            if ((i % 2) > 0) {")
-HtmlDo.WriteLine ("                contextNum.textBaseline = ""top"";")
-HtmlDo.WriteLine ("            } else {")
-HtmlDo.WriteLine ("                contextNum.textBaseline = ""bottom"";")
-HtmlDo.WriteLine ("            }")
+HtmlDo.WriteLine ("            contextNum.textBaseline = getBaseline();")
 HtmlDo.WriteLine ("        }")
 HtmlDo.WriteLine ("        if (x == pWid / 2) {")
 HtmlDo.WriteLine ("            // Don't print it. It gets ugly.")
 HtmlDo.WriteLine ("        } else {")
-HtmlDo.WriteLine ("            contextNum.fillText(Line7[i], (x - (pWid / 2)) * mult + (xSize / 2), (y + (pLen / 2)) * mult + (ySize / 2));")
+HtmlDo.WriteLine ("            contextNum.fillText(Line7[i], (x - (pWid / 2)) * (mult / " & Plate.Width & " * " & Map.DiagInches & " * 0.85) + (xSize / 2), (y + (pLen / 2)) * mult + (ySize / 2));")
 HtmlDo.WriteLine ("        }")
 HtmlDo.WriteLine ("        xPrime = (x - pWid / 2) * zRotCos - (y + pLen / 2) * zRotSin;")
 HtmlDo.WriteLine ("        yPrime =  (x - pWid / 2) * zRotSin + (y + pLen / 2) * zRotCos;")
@@ -589,7 +641,7 @@ HtmlDo.WriteLine ("        }")
 HtmlDo.WriteLine ("        if (y == -pLen / 2) {")
 HtmlDo.WriteLine ("            // Don't Print it; It gets confusing.")
 HtmlDo.WriteLine ("        } else {")
-HtmlDo.WriteLine ("            contextNum.fillText(Line8[i], (x - (pWid / 2)) * mult + (xSize / 2), (y + (pLen / 2)) * mult + (ySize / 2));")
+HtmlDo.WriteLine ("            contextNum.fillText(Line8[i], (x - (pWid / 2)) * (mult / " & Plate.Width & " * " & Map.DiagInches & " * 0.85) + (xSize / 2), (y + (pLen / 2)) * mult + (ySize / 2));")
 HtmlDo.WriteLine ("        }")
 HtmlDo.WriteLine ("        xPrime = (x - pWid / 2) * zRotCos - (y + pLen / 2) * zRotSin;")
 HtmlDo.WriteLine ("        yPrime =  (x - pWid / 2) * zRotSin + (y + pLen / 2) * zRotCos;")
@@ -642,14 +694,17 @@ HtmlDo.WriteLine ("</html>")
     Set HtmlFile = Nothing
     Set HtmlDo = Nothing
         
+If ObjPath = "C:\Users\Jacob\OneDrive\Documents\Surface Plates\Tests" Then
+    ' Do Nothing
+Else
     Dim ie As Object
     Set ie = CreateObject("InternetExplorer.application")
     ie.Navigate ObjPath
 On Error Resume Next
     ie.Visible = True
-    
     Set ie = Nothing
-    
+End If
+
 Exit Sub
 
 ErrorHandle:
@@ -657,15 +712,8 @@ ErrorHandle:
     
 End Sub
 
-
-'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-'   The following portion of code sourced from 
-'   http://www.vbaexpress.com/kb/getarticle.php?kb_id=284
-'   authored by Ken Puls in 2005
-'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
 Function BrowseForFolder(Optional OpenAt As Variant) As Variant
-     'Function purpose:  To Browser for a user selected folder.
+     'Function purpose:  To Browse for a user selected folder.
      'If the "OpenAt" path is provided, open the browser at that directory
      'NOTE:  If invalid, it will open at the Desktop level
 
