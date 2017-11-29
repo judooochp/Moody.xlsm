@@ -29,7 +29,7 @@ Handle Customer Requirements/OOT conditions
 
 (Completed 28Jan2017) Make extensible to plates that are not standard sizes using the GGG-P-463C formula.
 
-(Added 23Oct2017) Open HTML automatically. At the moment, it opens Explorer, but not the file.
+(Completed 28Nov2017) Open HTML automatically. Now opens in user's default browser.
 _______________________________________________________________________________________________
 
 System Requirements:
