@@ -137,7 +137,7 @@ End If
     Dim FilePath As String
 '''''               NameFile = InputBox("Filename?")
                 NameFile = Worksheets("Setup").Range("D5")
-FilePath = ObjPath & "\" & NameFile & ".html"
+FilePath = ObjPath & NameFile & ".html"
     Set HtmlDo = HtmlFile.CreateTextFile(FilePath, True)
 HtmlDo.WriteLine ("<!DOCTYPE HTML>")
 HtmlDo.WriteLine ("<html>")
@@ -693,17 +693,16 @@ HtmlDo.WriteLine ("</html>")
 
     Set HtmlFile = Nothing
     Set HtmlDo = Nothing
-        
-If ObjPath = "C:\Users\Jacob\OneDrive\Documents\Surface Plates\Tests" Then
-    ' Do Nothing
-Else
-    Dim ie As Object
-    Set ie = CreateObject("InternetExplorer.application")
-    ie.Navigate ObjPath
-On Error Resume Next
-    ie.Visible = True
-    Set ie = Nothing
-End If
+    
+'   More reliable than the commented IE code.
+    ActiveWorkbook.FollowHyperlink Address:=FilePath, NewWindow:=True
+    
+'    Dim ie As Object
+'    Set ie = CreateObject("InternetExplorer.application")
+'    ie.Navigate FilePath
+'On Error Resume Next
+'    ie.Visible = True
+'    Set ie = Nothing
 
 Exit Sub
 
@@ -750,3 +749,5 @@ Invalid:
      'If it was determined that the selection was invalid, set to False
     BrowseForFolder = False
 End Function
+
+
