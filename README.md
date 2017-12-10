@@ -38,13 +38,12 @@ Microsoft Excel 2007 or later preferred, other versions may have formatting or f
 
 Macros must be enabled.
 
-MS Internet Explorer 9 or better. Other HTML5 (and canvas) capable browsers are fine, but won't automatically open.
-
 Originally created in MSExcel 2016, this file is an implementation of T.O. 33K6-4-137-1: Surface Plates Autocollimator Method, dated 30 October 2005. It contains eight procedural sheets for entry of arcsecond angle measurements from which are calculated elevations, one sheet for setup entry and a results summary, and one hidden sheet that replicates a table from the T.O. for easy =IF() statements in the Setup&Summary sheet.
 
 Procedure calls for step to bring Lines G and H centerpoint to Zero with the Lines A and B. I have skipped this to show closure error in graphic.
 
-Changes to Setup dynamically makes available required number of rows on Line sheets to properly execute math for Summary.
+Changes to Setup dynamically make available required number of rows on Line sheets to properly execute math for Summary.
 
-A VBA macro takes the results and generates an HTML file that implements two <canvas> elements. One is a 3D representation of the surface plate, and the other is a point-by-point integer map of the elevation at each measurement point.
+A VBA macro takes the results and generates an HTML file that implements two <canvas> elements. One is a 3D wireframe representation of the surface plate, and the other is a point-by-point integer map of the elevation at each measurement point.
 Created by Jacob Gilliam, January2017
+Updated as seen fit through use and as time allows.
